@@ -26,8 +26,12 @@ REPUTABLE_DOMAINS = {
     "wsj.com", "ft.com", "nytimes.com", "theguardian.com", "cnbc.com",
     "forbes.com", "worldbank.org", "imf.org", "who.int", "oecd.org",
     "sec.gov", "census.gov", "bls.gov", "federalreserve.gov", "statista.com",
-    "nature.com", "science.org", "sciencedirect.com", "arxiv.org"
+    "nature.com", "science.org", "sciencedirect.com", "arxiv.org", "nasa.gov",
+    "wikipedia.org"
 }
+
+# Module-level query cache to prevent redundant live searches across identical assertions
+_GLOBAL_SEARCH_CACHE: Dict[str, List[Dict[str, Any]]] = {}
 
 
 def extract_domain(url: str) -> str:
@@ -148,22 +152,25 @@ def search_evidence_for_claim(
     evidence_items: List[EvidenceItem] = []
     has_api_error = False
     last_error_message: Optional[str] = None
+    active_cache = query_cache if query_cache is not None else _GLOBAL_SEARCH_CACHE
 
     for query in queries:
         norm_q = query.strip().lower()
-        if query_cache is not None and norm_q in query_cache:
-            results = query_cache[norm_q]
+        if norm_q in active_cache:
+            results = active_cache[norm_q]
         else:
             try:
                 response = client.search(
                     query=query,
-                    search_depth="advanced",
+                    search_depth="basic",
                     max_results=max_results_per_query,
                     include_answer=False,
                 )
                 results = response.get("results", []) if isinstance(response, dict) else []
-                if query_cache is not None:
-                    query_cache[norm_q] = results
+                # Keep active cache bounded
+                if len(active_cache) > 500:
+                    active_cache.clear()
+                active_cache[norm_q] = results
             except Exception as exc:
                 has_api_error = True
                 last_error_message = str(exc)
@@ -182,7 +189,6 @@ def search_evidence_for_claim(
             pub_date = item.get("published_date")
             score = item.get("score")
 
-            # Normalize score if provided
             norm_score = float(score) if score is not None else None
 
             evidence_items.append(
@@ -196,6 +202,10 @@ def search_evidence_for_claim(
                     relevance_score=norm_score,
                 )
             )
+
+        # Early exit optimization: If query returned >= 2 relevant evidence sources, stop redundant subsequent queries
+        if len(evidence_items) >= 2:
+            break
 
     # Prioritize evidence: rank authoritative domains and higher relevance scores first
     evidence_items.sort(

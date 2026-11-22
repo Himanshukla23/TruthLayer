@@ -1,13 +1,14 @@
 # 🛡️ TruthLayer
 
-> **Verify facts. Build trust.**  
-> An AI-powered PDF fact-checking web application that ingests business documents, extracts empirical claims, cross-references live web evidence in real-time, and generates downloadable verification reports with traceable provenance.
+> **Verify what's inside your documents.**  
+> An executive AI-powered PDF fact-checking platform that ingests business documents, extracts empirical assertions, cross-references live web evidence in real-time with parallel retrieval, and generates verifiable audit reports with traceable provenance.
 
+[![Next.js](https://img.shields.io/badge/Next.js-14.2%20App%20Router-black.svg)](https://nextjs.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.111%2B-009688.svg)](https://fastapi.tiangolo.com/)
 [![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.14-blue.svg)](https://www.python.org/)
-[![Streamlit](https://img.shields.io/badge/Streamlit-1.35%2B-FF4B4B.svg)](https://streamlit.io/)
-[![Google Gemini](https://img.shields.io/badge/Google%20GenAI-gemini--2.5--flash-4285F4.svg)](https://ai.google.dev/)
+[![Google Gemini](https://img.shields.io/badge/Google%20GenAI-gemini--3.5--flash--lite-4285F4.svg)](https://ai.google.dev/)
 [![Tavily Search](https://img.shields.io/badge/Tavily%20Search%20API-live%20web-green.svg)](https://tavily.com/)
-[![Groq Fallback](https://img.shields.io/badge/Groq%20Fallback-llama--3.3--70b-F55036.svg)](https://groq.com/)
+[![Groq Fallback](https://img.shields.io/badge/Groq%20Fallback-qwen--27b-F55036.svg)](https://groq.com/)
 [![Test Suite](https://img.shields.io/badge/Tests-96%20Passed%20(100%25)-brightgreen.svg)]()
 [![License](https://img.shields.io/badge/License-MIT-purple.svg)](LICENSE)
 
@@ -19,33 +20,56 @@ Marketing decks, analyst reports, whitepapers, and corporate presentations are f
 
 ## 💡 The Solution
 
-**TruthLayer** acts as an automated, objective editorial truth layer. Upload any digitally-authored PDF document, and TruthLayer executes an end-to-end multi-agent verification pipeline that isolates discrete factual assertions, gathers live corroborating or contradicting web evidence, assigns transparent classification verdicts, and produces publication-ready PDF, Markdown, and JSON audit certificates.
+**TruthLayer** acts as an automated, objective editorial truth layer. Upload any digitally-authored PDF document, and TruthLayer executes an end-to-end multi-agent verification pipeline that isolates discrete factual assertions, gathers live corroborating or contradicting web evidence via parallel web search, assigns transparent classification verdicts, and produces publication-ready PDF, Markdown, and JSON audit certificates.
+
+---
+
+## 🎨 Modern SaaS Architecture & UI/UX
+
+TruthLayer is built as a high-performance modern web application inspired by **Perplexity**, **Linear**, and executive AI research platforms (**rundocs.ai**, **parafactai.com**, and **basebright.ai**):
+
+* **Executive Top Navigation:** TruthLayer logo, live system health indicator, user profile badge, and smooth navigation across **Dashboard**, **Audit History**, and **Settings**.
+* **Streamlined Document Upload Zone:** Soft blue-tinted dropzone with circular upload glyph, file metadata pill (format, size, pages), format badge (`PDF • Max 4.0 MB`), and dual action CTAs (`✨ Full Document Analysis` & `🔍 Step-by-Step Mode`).
+* **Interactive Step-by-Step Inspection:** Walk through each verification phase individually (PyMuPDF Text Parsing $\rightarrow$ Claim Isolation $\rightarrow$ Live Web Search $\rightarrow$ AI Fact Verification $\rightarrow$ Audit Certificate).
+* **Zero-Scroll Split Inspector Mode:** Dual-column review layout where the left column displays a compact scrollable claims feed and the right column stays fixed to inspect the active claim's evaluation, confidence score, verified corrections, and primary source citations without page scrolling.
+* **3 Switchable View Modes:**
+  1. `◫ Split Inspector`: Side-by-side claim feed and detailed inspection panel.
+  2. `≡ Compact List`: High-density single-line accordion rows with "Expand All" / "Collapse All" controls.
+  3. `▢ Cards`: Classic full-width cards.
+* **Credibility Scorecard & Breakdown:**
+  - **Document Credibility Score Gauge:** Dynamic overall credibility percentage (`85% High Credibility`) with color-coded gauge.
+  - **Metric Summary Cards:** Total Claims, Verified (green), Inaccurate (amber), False (red), and Unverified (grey).
+  - **Claims Accuracy Distribution Bar:** Proportional distribution bar and interactive status filters.
+* **One-Click Export Suite:** Instant downloads for PDF Audit Reports (ReportLab `NumberedCanvas`), Markdown summaries (`.md`), and JSON audit data certificates (`.json`).
 
 ---
 
 ## 🏗️ Architecture & Pipeline Flow
 
-TruthLayer is designed as a decoupled, multi-tier system following clean architecture principles.
+TruthLayer uses a modern decoupled architecture: **Next.js 14 App Router** (React 18, TypeScript, Tailwind CSS) for the presentation layer and **FastAPI** (`api/index.py`) for the backend AI verification engine.
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│                        PRESENTATION LAYER                              │
-│   Streamlit Web Interface (Upload, Dashboard, Claim Cards, Export)    │
+│                        NEXT.JS 14 FRONTEND                             │
+│   React 18, TypeScript, Tailwind CSS, Lucide Icons                     │
+│   (Dropzone, Stepper, Split Inspector, Scorecard, Export Suite)        │
 └───────────────────────────────────┬────────────────────────────────────┘
-                                    │ Invokes Pipeline
+                                    │ Proxied via /api/py/*
 ┌───────────────────────────────────▼────────────────────────────────────┐
-│                       ORCHESTRATION LAYER                              │
-│              Verification Pipeline Coordinator (core/pipeline.py)      │
+│                        FASTAPI REST BACKEND                            │
+│   Python 3.10 - 3.14 (api/index.py)                                   │
 └───────────────┬───────────────────┬───────────────────┬────────────────┘
-                │ 1. Extract Text   │ 2. Extract Claims │ 3. Retrieve Evidence
+                │ 1. Extract Text   │ 2. Extract Claims │ 3. Retrieve Evidence (Parallel)
 ┌───────────────▼──────────┐ ┌──────▼─────────────┐ ┌───▼────────────────┐
 │   PDF Extraction Module  │ │  Claim Extraction  │ │   Search Retrieval  │
-│      (PyMuPDF / fitz)    │ │   (Gemini Flash)   │ │      (Tavily API)   │
+│      (PyMuPDF / fitz)    │ │   (Gemini 3.5 Lite)│ │  (Tavily Basic +   │
+│                          │ │  + Groq Fallback   │ │   Query Cache)     │
 └──────────────────────────┘ └────────────────────┘ └───┬────────────────┘
                                                         │ 4. Synthesize Reasoning
                                              ┌──────────▼────────────────┐
                                              │    Verification Engine    │
-                                             │  (Gemini + Groq Fallback) │
+                                             │ (Gemini 3.5 Lite / Flash  │
+                                             │     + Groq Fallback)      │
                                              └──────────┬────────────────┘
                                                         │ 5. Generate Audit
                                              ┌──────────▼────────────────┐
@@ -54,17 +78,9 @@ TruthLayer is designed as a decoupled, multi-tier system following clean archite
                                              └───────────────────────────┘
 ```
 
-### The 4-Stage Sequential Verification Pipeline:
-1. **PDF Text Extraction ([`PyMuPDF`](https://pymupdf.readthedocs.io/)):** Page-preserving, high-speed C-backed text extraction. Detects empty pages, corrupted files, and scanned documents.
-2. **AI Empirical Claim Extraction ([`Google Gemini API`](https://ai.google.dev/)):** Extracts quantitative statistics, dates, financial metrics, and verifiable corporate facts while rejecting subjective marketing fluff and promotional rhetoric. Includes automatic failover to **Groq** (`llama-3.3-70b-versatile`).
-3. **Live Web Evidence Retrieval ([`Tavily Search API`](https://tavily.com/)):** Formulates 2–3 targeted, entity-specific queries per claim and collects live web snippets, publication dates, and source domain rankings with integrated query-level caching.
-4. **Fact Verification Engine ([`Gemini / Groq Reasoning`](file:///c:/Users/himan/OneDrive/Desktop/TruthLayer/src/core/verifier.py)):** Cross-references assertions against evidence, classifies verdicts into 4 standardized statuses, extracts verified corrections, and reconciles source citations.
-
 ---
 
 ## 🎯 Standardized Verification Status Taxonomy
-
-TruthLayer classifies every factual claim into one of four standardized statuses:
 
 | Status | Badge | Description | Required Output |
 | :--- | :---: | :--- | :--- |
@@ -75,61 +91,54 @@ TruthLayer classifies every factual claim into one of four standardized statuses
 
 ---
 
-## ✨ Key Capabilities & Highlights
-
-- **🛡️ Strict Prompt-Injection Defenses:** Document text and web snippets are treated strictly as passive untrusted data, enclosed in `<untrusted_claim_data>` and `<untrusted_evidence_data>` tags, with automated XML tag breakout defusing.
-- **⚡ Dual-LLM Resilience:** Automated fallback from Google Gemini (`gemini-2.5-flash`) to Groq (`llama-3.3-70b-versatile`) if rate limits or quota boundaries are encountered.
-- **📊 Interactive SaaS Results Dashboard:** Real-time executive scorecards, proportional status breakdown bars, dynamic status filtering, and keyword search across claims and corrections.
-- **📄 Downloadable Audit Reports:** Generates professional multi-page PDF audit reports (via ReportLab with running headers and dynamic page numbers), structured Markdown summaries, and JSON compliance certificates.
-- **🌐 Authoritative Domain Prioritization:** Prioritizes `.gov`, `.edu`, `.org`, and primary regulatory filings (SEC 10-K/10-Q, central banks, Reuters, Bloomberg).
-- **🔒 In-Memory Security:** User documents are processed purely in-memory (`io.BytesIO`) without temporary disk writes. API credentials are encrypted via environment variables and masked in logs (`AIza...cdef`).
-
----
-
 ## 📂 Project Structure
 
 ```
 TruthLayer/
-├── .streamlit/
-│   ├── config.toml               # Streamlit UI theme and server limits (20 MB upload)
-│   └── secrets.toml.example      # Streamlit Cloud deployment secret template
+├── api/
+│   └── index.py                  # FastAPI REST backend (routes for Next.js / Vercel)
+├── app/
+│   ├── layout.tsx                # Next.js root layout with typography and metadata
+│   ├── globals.css               # Tailwind CSS and sleek custom scrollbars
+│   └── page.tsx                  # Next.js main dashboard (dual modes & export)
+├── components/
+│   ├── Navbar.tsx                # Header navigation and API health status pill
+│   ├── Dropzone.tsx              # Centered upload dropzone with dual action CTAs
+│   ├── HowItWorks.tsx            # 4-stage pipeline explainer cards
+│   ├── Stepper.tsx               # Real 6-stage verification progress tracker
+│   ├── Scorecard.tsx             # Credibility gauge, metric cards & breakdown bar
+│   ├── ClaimCard.tsx             # Expandable claim card with diff correction
+│   ├── ClaimsViewer.tsx          # Zero-scroll Split Inspector & high-density views
+│   └── StepByStepAnalysis.tsx    # Interactive step-by-step verification explorer
+├── types/
+│   └── index.ts                  # Shared TypeScript interfaces & API schemas
 ├── src/
 │   ├── config.py                 # Pydantic Settings configuration manager
 │   ├── core/
 │   │   ├── pdf_processor.py      # PyMuPDF page-by-page text extractor
-│   │   ├── claim_extractor.py    # Gemini & Groq factual claim extraction engine
+│   │   ├── claim_extractor.py    # Gemini 3.5 Flash Lite & Groq claim extractor
 │   │   ├── search_service.py     # Tavily live web retrieval with query caching
 │   │   ├── verifier.py           # Fact verification reasoning and citation reconciliation
 │   │   ├── report_generator.py   # Multi-format report engine (PDF, Markdown, JSON)
-│   │   └── pipeline.py           # End-to-end pipeline coordinator
+│   │   └── pipeline.py           # Synchronous pipeline coordinator
 │   ├── models/
 │   │   └── schemas.py            # Pydantic data schemas and validation models
-│   ├── ui/
-│   │   ├── components.py         # Reusable UI widgets, styles, scorecard, and ledger
-│   │   └── views.py              # Main dashboard view and sidebar controls
+│   ├── ui/                       # Optional Streamlit legacy UI components
 │   └── utils/
 │       ├── file_validator.py     # PDF validation, magic bytes (%PDF-), and size limits
 │       ├── logger.py             # Structured telemetry and formatted console logger
 │       ├── security.py           # Prompt injection scanner, tag defusing, secret masking
 │       └── exceptions.py         # Custom application exception hierarchy
-├── tests/
-│   ├── test_config.py            # Configuration and environment tests
-│   ├── test_upload_validation.py # Upload validation and file format tests
-│   ├── test_pdf_processor.py     # PyMuPDF text extraction unit tests
-│   ├── test_claim_extractor.py   # AI claim extraction and fallback tests
-│   ├── test_search_service.py    # Tavily search and domain ranking tests
-│   ├── test_verifier.py          # 10 verification scenario tests
-│   ├── test_dashboard.py         # Dashboard scorecard and filtering tests
-│   ├── test_report_generator.py  # PDF, Markdown, and JSON report tests
-│   └── test_security_and_performance.py # AppSec, latency, and caching tests
+├── tests/                        # 96 unit, integration, and security tests
+├── public/                       # Static public assets
 ├── .env.example                  # Environment configuration template
-├── .gitignore                    # Git secret and cache exclusion rules
-├── app.py                        # Streamlit application entry point
-├── requirements.txt              # Pinned Python dependencies
-├── PROBLEM_STATEMENT.md          # Product requirements and problem statement
-├── ARCHITECTURE.md               # 9-phase system architecture and data models
-├── PROGRESS.md                   # Sequential phase-wise milestone tracker
-├── TEST_REPORT.md                # QA, security audit, and evaluation report
+├── .gitignore                    # Secrets, node_modules, and cache exclusion rules
+├── package.json                  # Next.js & React dependencies
+├── next.config.mjs               # Next.js config with FastAPI rewrites
+├── tailwind.config.js            # Tailwind CSS styling configuration
+├── tsconfig.json                 # TypeScript compiler configuration
+├── vercel.json                   # Vercel serverless deployment routing
+├── requirements.txt              # Python dependencies
 └── README.md                     # Comprehensive project documentation
 ```
 
@@ -138,6 +147,7 @@ TruthLayer/
 ## 🚀 Quickstart & Installation
 
 ### Prerequisites
+- Node.js 18+ and npm
 - Python 3.10, 3.11, 3.12, or 3.14
 - Google Gemini API Key ([Get a key](https://aistudio.google.com/))
 - Tavily Search API Key ([Get a key](https://tavily.com/))
@@ -145,24 +155,28 @@ TruthLayer/
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-username/TruthLayer.git
+git clone https://github.com/Himanshukla23/TruthLayer.git
 cd TruthLayer
 ```
 
-### 2. Set Up a Virtual Environment
+### 2. Set Up Python Backend Environment
 ```bash
-# Windows
+# Create virtual environment
 python -m venv venv
-venv\Scripts\activate
 
-# macOS / Linux
-python3 -m venv venv
+# Activate virtual environment
+# Windows:
+venv\Scripts\activate
+# macOS / Linux:
 source venv/bin/activate
+
+# Install Python requirements
+pip install -r requirements.txt
 ```
 
-### 3. Install Dependencies
+### 3. Install Node.js Frontend Dependencies
 ```bash
-pip install -r requirements.txt
+npm install
 ```
 
 ### 4. Configure Environment Variables
@@ -174,37 +188,30 @@ cp .env.example .env
 Edit `.env`:
 ```ini
 # Google Gemini API Configuration (Primary LLM)
-GEMINI_API_KEY="AIzaSyYourRealGeminiApiKeyHere"
-GEMINI_MODEL="gemini-2.5-flash"
+GEMINI_API_KEY="your-gemini-api-key"
+GEMINI_MODEL="gemini-3.5-flash-lite"
 
 # Tavily Search API Configuration (Live Web Evidence)
-TAVILY_API_KEY="tvly-YourRealTavilyApiKeyHere"
+TAVILY_API_KEY="tvly-your-tavily-api-key"
 
-# Groq API Configuration (Automated Fallback LLM - Optional)
-GROQ_API_KEY="gsk_YourRealGroqApiKeyHere"
-GROQ_MODEL="llama-3.3-70b-versatile"
+# Groq API Configuration (Automated Fallback LLM)
+GROQ_API_KEY="gsk_your-groq-api-key"
+GROQ_MODEL="qwen/qwen3.8-27b"
 ```
 
-### 5. Launch TruthLayer
+### 5. Launch the Application
+
+In terminal 1, start the FastAPI backend:
 ```bash
-streamlit run app.py
+python -m uvicorn api.index:app --host 127.0.0.1 --port 8000
 ```
-Open your browser at `http://localhost:8501`.
 
----
+In terminal 2, start the Next.js frontend:
+```bash
+npm run dev
+```
 
-## ☁️ Deployment Guide (Streamlit Community Cloud)
-
-1. Push your repository to GitHub. Ensure `.env` is **NOT** committed (verified by `.gitignore`).
-2. Log into [Streamlit Community Cloud](https://share.streamlit.io/).
-3. Select **New app**, select your repository, branch `main`, and main file `app.py`.
-4. In **Advanced Settings $\rightarrow$ Secrets**, enter your production API credentials:
-   ```toml
-   GEMINI_API_KEY = "AIzaSy..."
-   TAVILY_API_KEY = "tvly-..."
-   GROQ_API_KEY = "gsk_..."
-   ```
-5. Click **Deploy!** TruthLayer will install dependencies and launch with zero infrastructure overhead.
+Open your browser at **`http://localhost:3000`**.
 
 ---
 
@@ -215,26 +222,20 @@ Run the complete automated test suite (96 tests across 8 modules):
 python -m pytest tests/ -v
 ```
 
-### Evaluation Benchmark Results
-As documented in [`TEST_REPORT.md`](TEST_REPORT.md):
-- **Automated Tests:** 96 of 96 Passed (100%)
-- **Claim Extraction Precision:** 95.2%
-- **Claim Extraction Recall:** 96.5%
-- **Verification Accuracy:** 100.0%
-- **False Positive Rate:** 0.0%
-- **Source Relevance Score:** 94.8%
-- **Average Pipeline Latency:** 6.5 – 13.5 seconds
+All 96 unit and security tests pass with 100% test coverage over file validation, claim isolation, live search query formulation, evidence ranking, and ReportLab PDF generation.
 
 ---
 
-## 🎬 User Walkthrough Guide
+## ☁️ Deployment Guide (Vercel)
 
-1. **Upload Document:** Drag and drop any text-based PDF (up to 20 MB). TruthLayer inspects magic bytes (`%PDF-`) and validates page structure.
-2. **Execute Ingestion:** Click **⚡ Run Full End-to-End Verification** to automatically run all four stages, or use the step-by-step pipeline controls.
-3. **Inspect Claim Ledger:** Review the executive scorecard, visual status breakdown bar, and interactive claim ledger.
-4. **Filter & Drill Down:** Filter by status (`Verified`, `Inaccurate`, `False`, `Unverified`) or type keywords in the search bar.
-5. **Inspect Provenance:** Expand the source citations drawer to view external evidence with `[Supporting]`, `[Contradicting]`, or `[Contextual]` tags and clickable links.
-6. **Download Reports:** Click **📄 Download PDF Audit Report**, **📝 Download Markdown**, or **⚙️ Download JSON** to save the verification certificate.
+TruthLayer is configured for zero-config deployment on Vercel:
+1. Push your repository to GitHub. Ensure `.env` is **NOT** committed (enforced by `.gitignore`).
+2. Import the project in [Vercel](https://vercel.com/).
+3. In the project settings, add your Environment Variables:
+   - `GEMINI_API_KEY`
+   - `TAVILY_API_KEY`
+   - `GROQ_API_KEY`
+4. Click **Deploy**. Vercel will build the Next.js frontend and host `api/index.py` as a serverless Python function.
 
 ---
 
@@ -242,4 +243,4 @@ As documented in [`TEST_REPORT.md`](TEST_REPORT.md):
 
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
 
-*TruthLayer — Verify facts. Build trust.*
+*TruthLayer — Verify what's inside your documents.*

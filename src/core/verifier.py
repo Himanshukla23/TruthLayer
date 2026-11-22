@@ -151,26 +151,36 @@ def parse_verification_json(raw_text: str) -> Dict[str, Any]:
 
 
 def verify_with_gemini(prompt_text: str, api_key: str, model_name: str) -> Dict[str, Any]:
-    """Execute verification reasoning using Google Gemini API."""
+    """Execute verification reasoning using Google Gemini API with multi-model fallback resilience."""
     from google import genai
     from google.genai import types
 
     client = genai.Client(api_key=api_key)
     full_prompt = f"{VERIFICATION_SYSTEM_PROMPT}\n\n{prompt_text}"
 
-    response = client.models.generate_content(
-        model=model_name,
-        contents=full_prompt,
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            temperature=0.1,
-        ),
-    )
+    candidate_models = [model_name]
+    for fallback_candidate in ["gemini-3.5-flash-lite", "gemini-2.5-flash-lite", "gemini-flash-lite-latest", "gemini-3.5-flash"]:
+        if fallback_candidate not in candidate_models:
+            candidate_models.append(fallback_candidate)
 
-    if not response or not response.text:
-        raise VerificationError("Gemini returned an empty verification response.")
+    last_error = None
+    for candidate in candidate_models:
+        try:
+            response = client.models.generate_content(
+                model=candidate,
+                contents=full_prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    temperature=0.1,
+                ),
+            )
+            if response and response.text:
+                return parse_verification_json(response.text)
+        except Exception as exc:
+            last_error = exc
+            logger.warning(f"Gemini verification model '{candidate}' failed ({exc}), attempting next candidate if available...")
 
-    return parse_verification_json(response.text)
+    raise VerificationError(f"Gemini verification failed across all candidates: {last_error}")
 
 
 def verify_with_groq(prompt_text: str, api_key: str, model_name: str) -> Dict[str, Any]:

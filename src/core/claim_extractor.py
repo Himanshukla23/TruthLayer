@@ -41,8 +41,9 @@ CRITICAL EXTRACTION RULES:
    - Do NOT fabricate, invent, or guess details not present in the document.
    - Do NOT verify or fact-check claims at this stage.
 
-4. DEDUPLICATION:
+4. DEDUPLICATION & PRIORITIZATION:
    - If the exact same factual assertion is repeated across paragraphs, extract it once under the earliest page where it appears.
+   - Extract up to 20 of the most significant, impactful empirical claims across the document (focus on key figures, financial data, and substantive factual assertions; avoid fragmenting dense tabular data into dozens of repetitive micro-claims).
 
 5. OUTPUT FORMAT:
    - You MUST output ONLY valid JSON matching this exact structure:
@@ -101,6 +102,7 @@ def deduplicate_and_validate_claims(
     total_pages: int,
     document_name: str,
     model_used: str,
+    max_claims: Optional[int] = 20,
 ) -> ClaimExtractionResponse:
     """Normalize, deduplicate, and validate claim items into a strongly typed response."""
     seen_texts = set()
@@ -108,6 +110,9 @@ def deduplicate_and_validate_claims(
     claim_counter = 1
 
     for claim_data in raw_claims:
+        if max_claims and len(validated_claims) >= max_claims:
+            break
+
         original_claim = str(claim_data.get("original_claim", "")).strip()
         if not original_claim or len(original_claim) < 3:
             continue
@@ -167,26 +172,36 @@ def extract_claims_with_gemini(
     api_key: str,
     model_name: str,
 ) -> Dict[str, Any]:
-    """Execute claim extraction using modern Google GenAI SDK."""
+    """Execute claim extraction using modern Google GenAI SDK with multi-model fallback resilience."""
     from google import genai
     from google.genai import types
 
     client = genai.Client(api_key=api_key)
     full_prompt = f"{SYSTEM_INSTRUCTION}\n\nDocument Name: {document_name}\n\nExtracted Document Content:\n{prompt_text}"
 
-    response = client.models.generate_content(
-        model=model_name,
-        contents=full_prompt,
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            temperature=0.1,
-        ),
-    )
+    candidate_models = [model_name]
+    for fallback_candidate in ["gemini-3.5-flash-lite", "gemini-2.5-flash-lite", "gemini-flash-lite-latest", "gemini-3.5-flash"]:
+        if fallback_candidate not in candidate_models:
+            candidate_models.append(fallback_candidate)
 
-    if not response or not response.text:
-        raise ClaimExtractionError("Gemini returned an empty response.")
+    last_error = None
+    for candidate in candidate_models:
+        try:
+            response = client.models.generate_content(
+                model=candidate,
+                contents=full_prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    temperature=0.1,
+                ),
+            )
+            if response and response.text:
+                return parse_llm_json_response(response.text)
+        except Exception as exc:
+            last_error = exc
+            logger.warning(f"Gemini model '{candidate}' failed ({exc}), attempting next candidate if available...")
 
-    return parse_llm_json_response(response.text)
+    raise ClaimExtractionError(f"Gemini extraction failed across all model candidates: {last_error}")
 
 
 def extract_claims_with_groq(

@@ -1,7 +1,11 @@
-"""Reusable UI components and styles for TruthLayer's SaaS interface."""
+"""Reusable UI components and styles for TruthLayer's modern SaaS interface.
+
+Inspired by Perplexity, Linear, and leading AI research platforms (rundocs.ai, parafactai.com, basebright.ai).
+"""
 
 import streamlit as st
-from typing import Callable, Optional
+from datetime import datetime, timezone
+from typing import Callable, Dict, List, Optional
 from src.models.schemas import (
     PDFExtractionResult,
     ClaimExtractionResponse,
@@ -11,6 +15,7 @@ from src.models.schemas import (
     VerificationReport,
     ClaimVerificationResult,
     VerificationStatus,
+    VerificationSourceCitation,
 )
 from src.core.report_generator import (
     generate_pdf_report,
@@ -20,14 +25,30 @@ from src.core.report_generator import (
 
 
 def inject_custom_styles() -> None:
-    """Inject clean, professional SaaS CSS styles for dark navy typography and subtle blue accents."""
+    """Inject clean, modern, high-end SaaS CSS styles with refined typography, shadows, and interactive components."""
     st.markdown(
         """
         <style>
-        /* Base typography & clean background */
-        html, body, [class*="css"] {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            color: #0F172A;
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+
+        /* Hide Streamlit default clutter */
+        #MainMenu { visibility: hidden !important; }
+        footer { visibility: hidden !important; }
+        header[data-testid="stHeader"] { background: rgba(255, 255, 255, 0.9) !important; backdrop-filter: blur(8px) !important; }
+        .stAppDeployButton { display: none !important; }
+
+        /* Global typography & canvas */
+        html, body, [class*="css"], .stApp {
+            font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+            color: #0F172A !important;
+            background-color: #FAFAFC !important;
+        }
+
+        /* Container width & padding */
+        .block-container {
+            max-width: 1120px !important;
+            padding-top: 1.5rem !important;
+            padding-bottom: 4rem !important;
         }
 
         /* Top navbar header */
@@ -35,243 +56,411 @@ def inject_custom_styles() -> None:
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0.5rem 0 1.5rem 0;
+            padding: 0.75rem 0 1.25rem 0;
             border-bottom: 1px solid #E2E8F0;
             margin-bottom: 2rem;
         }
-        .brand-title {
-            font-size: 1.85rem;
-            font-weight: 700;
-            color: #0F172A;
-            letter-spacing: -0.025em;
+        .brand-left {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 2rem;
         }
-        .brand-tagline {
-            font-size: 0.95rem;
-            color: #2563EB;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        /* Hero Banner */
-        .hero-section {
-            background: linear-gradient(180deg, #F8FAFC 0%, #FFFFFF 100%);
-            border: 1px solid #E2E8F0;
-            border-radius: 12px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            text-align: center;
-        }
-        .hero-heading {
-            font-size: 2.1rem;
+        .brand-title {
+            font-size: 1.5rem;
             font-weight: 800;
             color: #0F172A;
-            margin-bottom: 0.75rem;
-            letter-spacing: -0.03em;
-        }
-        .hero-description {
-            font-size: 1.05rem;
-            color: #475569;
-            max-width: 650px;
-            margin: 0 auto 1.25rem auto;
-            line-height: 1.6;
-        }
-
-        /* Persona Pill Badges */
-        .persona-container {
+            letter-spacing: -0.035em;
             display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            text-decoration: none;
+        }
+        .brand-icon {
+            width: 34px;
+            height: 34px;
+            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+            color: white;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
             justify-content: center;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            margin-top: 1rem;
+            font-size: 1.1rem;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
         }
-        .persona-badge {
-            background-color: #EFF6FF;
-            color: #1D4ED8;
-            font-size: 0.8rem;
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        .nav-link {
+            font-size: 0.9rem;
             font-weight: 600;
-            padding: 0.3rem 0.85rem;
-            border-radius: 9999px;
-            border: 1px solid #DBEAFE;
-        }
-
-        /* Document info card */
-        .doc-card {
-            background: #FFFFFF;
-            border: 1px solid #CBD5E1;
-            border-radius: 10px;
-            padding: 1.5rem;
-            margin-top: 1rem;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-        }
-        .doc-card-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .doc-name {
-            font-size: 1.15rem;
-            font-weight: 700;
-            color: #0F172A;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .doc-meta {
-            font-size: 0.875rem;
             color: #64748B;
-            margin-top: 0.35rem;
+            text-decoration: none;
+            transition: color 0.15s ease;
         }
-        .status-pill-valid {
-            background-color: #DCFCE7;
-            color: #166534;
-            padding: 0.25rem 0.75rem;
-            border-radius: 6px;
-            font-size: 0.8rem;
+        .nav-link.active {
+            color: #2563EB;
+        }
+        .brand-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .status-pill-online {
+            background-color: #ECFDF5;
+            color: #059669;
+            font-size: 0.78rem;
             font-weight: 600;
+            padding: 0.25rem 0.65rem;
+            border-radius: 9999px;
+            border: 1px solid #A7F3D0;
             display: inline-flex;
             align-items: center;
             gap: 0.35rem;
         }
-
-        /* Verification Status Badges */
-        .badge-verified {
-            background-color: #DCFCE7;
-            color: #166534;
-            font-size: 0.8rem;
-            font-weight: 700;
-            padding: 0.25rem 0.65rem;
-            border-radius: 6px;
-            border: 1px solid #BBF7D0;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.3rem;
-        }
-        .badge-inaccurate {
-            background-color: #FEF3C7;
-            color: #92400E;
-            font-size: 0.8rem;
-            font-weight: 700;
-            padding: 0.25rem 0.65rem;
-            border-radius: 6px;
-            border: 1px solid #FDE68A;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.3rem;
-        }
-        .badge-false {
-            background-color: #FEE2E2;
-            color: #991B1B;
-            font-size: 0.8rem;
-            font-weight: 700;
-            padding: 0.25rem 0.65rem;
-            border-radius: 6px;
-            border: 1px solid #FECACA;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.3rem;
-        }
-        .badge-unverified {
-            background-color: #F1F5F9;
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 9999px;
+            background: #E2E8F0;
             color: #475569;
-            font-size: 0.8rem;
-            font-weight: 700;
-            padding: 0.25rem 0.65rem;
-            border-radius: 6px;
-            border: 1px solid #E2E8F0;
-            display: inline-flex;
+            display: flex;
             align-items: center;
-            gap: 0.3rem;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: 700;
         }
 
-        /* Verification Card */
-        .verify-card {
+        /* Hero Heading & Subtitle */
+        .hero-title-area {
+            text-align: center;
+            max-width: 720px;
+            margin: 1.5rem auto 2.5rem auto;
+        }
+        .main-heading {
+            font-size: 2.4rem;
+            font-weight: 800;
+            color: #0F172A;
+            letter-spacing: -0.04em;
+            line-height: 1.2;
+            margin-bottom: 0.75rem;
+        }
+        .main-heading span {
+            background: linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .main-subtitle {
+            font-size: 1.1rem;
+            color: #475569;
+            line-height: 1.6;
+            margin: 0 auto;
+        }
+
+        /* rundocs.ai style Dropzone */
+        .rundocs-dropzone {
+            background: #F0F7FF;
+            border: 2px dashed #BFDBFE;
+            border-radius: 20px;
+            padding: 3rem 2rem 2.5rem 2rem;
+            text-align: center;
+            transition: all 0.2s ease-in-out;
+            margin-bottom: 2.5rem;
+        }
+        .rundocs-dropzone:hover {
+            border-color: #2563EB;
+            background: #EFF6FF;
+            box-shadow: 0 8px 30px rgba(37, 99, 235, 0.08);
+        }
+        .upload-icon-circle {
+            width: 56px;
+            height: 56px;
+            background-color: #2563EB;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            margin: 0 auto 1.25rem auto;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+        }
+        .dropzone-title {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: #0F172A;
+            margin-bottom: 0.5rem;
+        }
+        .dropzone-desc {
+            font-size: 0.95rem;
+            color: #64748B;
+            max-width: 480px;
+            margin: 0 auto 1.5rem auto;
+            line-height: 1.5;
+        }
+        .format-badge-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1.25rem;
+            font-size: 0.78rem;
+            color: #64748B;
+        }
+        .format-pill {
+            background: #DBEAFE;
+            color: #1E40AF;
+            padding: 0.15rem 0.6rem;
+            border-radius: 9999px;
+            font-weight: 700;
+            font-size: 0.72rem;
+        }
+
+        /* Streamlit File Uploader Makeover */
+        [data-testid="stFileUploadDropzone"] {
+            background-color: #FFFFFF !important;
+            border: 2px dashed #93C5FD !important;
+            border-radius: 16px !important;
+            padding: 2rem 1.5rem !important;
+            text-align: center !important;
+            box-shadow: 0 4px 16px -2px rgba(37, 99, 235, 0.04) !important;
+            transition: all 0.2s ease-in-out !important;
+        }
+        [data-testid="stFileUploadDropzone"]:hover {
+            border-color: #2563EB !important;
+            background-color: #F8FAFC !important;
+            box-shadow: 0 6px 24px -2px rgba(37, 99, 235, 0.08) !important;
+        }
+        [data-testid="stFileUploadDropzone"] button {
+            background: #FFFFFF !important;
+            color: #1E293B !important;
+            border: 1px solid #CBD5E1 !important;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
+            padding: 0.5rem 1.2rem !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+            transition: all 0.15s ease !important;
+        }
+        [data-testid="stFileUploadDropzone"] button:hover {
+            border-color: #2563EB !important;
+            color: #2563EB !important;
+            background: #EFF6FF !important;
+        }
+
+        /* Primary Action Buttons */
+        .stButton > button {
+            background: linear-gradient(135deg, #1E40AF 0%, #2563EB 100%) !important;
+            color: #FFFFFF !important;
+            border: none !important;
+            border-radius: 10px !important;
+            font-weight: 600 !important;
+            font-size: 0.95rem !important;
+            padding: 0.65rem 1.5rem !important;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.22) !important;
+            transition: all 0.15s ease-in-out !important;
+        }
+        .stButton > button:hover {
+            transform: translateY(-1px) !important;
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.32) !important;
+            color: #FFFFFF !important;
+        }
+        .stButton > button:active {
+            transform: translateY(0) !important;
+        }
+
+        /* Feature Cards (What happens to your documents) */
+        .section-subhead {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #94A3B8;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            text-align: center;
+            margin-bottom: 1.25rem;
+        }
+        .feature-card {
+            background: #FFFFFF !important;
+            border: 1px solid #E2E8F0 !important;
+            border-radius: 14px !important;
+            padding: 1.5rem !important;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03) !important;
+            transition: all 0.2s ease-in-out !important;
+            height: 100% !important;
+        }
+        .feature-card:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06) !important;
+            border-color: #BFDBFE !important;
+        }
+        .feature-icon-purple {
+            font-size: 1.3rem;
+            margin-bottom: 0.75rem;
+            background: #FAF5FF;
+            color: #7E22CE;
+            width: 40px;
+            height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+        }
+        .feature-icon-yellow {
+            font-size: 1.3rem;
+            margin-bottom: 0.75rem;
+            background: #FEFCE8;
+            color: #A16207;
+            width: 40px;
+            height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+        }
+        .feature-icon-green {
+            font-size: 1.3rem;
+            margin-bottom: 0.75rem;
+            background: #F0FDF4;
+            color: #15803D;
+            width: 40px;
+            height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+        }
+        .feature-icon-blue {
+            font-size: 1.3rem;
+            margin-bottom: 0.75rem;
+            background: #EFF6FF;
+            color: #2563EB;
+            width: 40px;
+            height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+        }
+        .feature-title {
+            font-size: 1.02rem;
+            font-weight: 700;
+            color: #0F172A;
+            margin-bottom: 0.4rem;
+        }
+        .feature-text {
+            font-size: 0.875rem;
+            color: #64748B;
+            line-height: 1.6;
+        }
+
+        /* Selected Document Card */
+        .selected-doc-card {
             background: #FFFFFF;
             border: 1px solid #E2E8F0;
-            border-radius: 8px;
-            padding: 1.25rem;
-            margin-bottom: 1.25rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
-        .verify-card-header {
+            border-radius: 14px;
+            padding: 1.25rem 1.5rem;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 0.75rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
         }
-        .correction-box {
-            background: #EFF6FF;
-            border-left: 4px solid #2563EB;
-            border-radius: 0 6px 6px 0;
-            padding: 0.75rem 1rem;
-            margin: 0.75rem 0;
-            font-size: 0.9rem;
-            color: #1E3A8A;
+        .selected-doc-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
         }
-        .explanation-text {
-            font-size: 0.92rem;
-            color: #334155;
-            line-height: 1.6;
-            margin: 0.5rem 0;
+        .pdf-icon-badge {
+            width: 42px;
+            height: 42px;
+            background: #FEE2E2;
+            color: #DC2626;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            font-weight: 800;
+        }
+        .doc-title-text {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #0F172A;
+        }
+        .doc-meta-text {
+            font-size: 0.85rem;
+            color: #64748B;
+            margin-top: 0.15rem;
         }
 
-        /* Evidence Card Styling */
-        .evidence-box {
-            background: #F8FAFC;
-            border: 1px solid #E2E8F0;
-            border-radius: 6px;
-            padding: 0.85rem;
-            margin-top: 0.65rem;
-            margin-bottom: 0.65rem;
+        /* Metrics & Scorecards (basebright.ai style) */
+        [data-testid="stMetric"] {
+            background: #FFFFFF !important;
+            border: 1px solid #E2E8F0 !important;
+            border-radius: 14px !important;
+            padding: 1.25rem 1.5rem !important;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03) !important;
+            transition: transform 0.15s ease !important;
         }
-        .evidence-title {
-            font-size: 0.95rem;
-            font-weight: 600;
-            color: #0F172A;
+        [data-testid="stMetric"]:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05) !important;
+        }
+        [data-testid="stMetricValue"] {
+            font-size: 2.1rem !important;
+            font-weight: 800 !important;
+            color: #0F172A !important;
+            letter-spacing: -0.04em !important;
+        }
+        [data-testid="stMetricLabel"] {
+            font-size: 0.8rem !important;
+            font-weight: 700 !important;
+            color: #64748B !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.06em !important;
+        }
+
+        /* Score Gauge Card (parafactai.com style) */
+        .credibility-gauge-card {
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .gauge-info {
+            flex: 1;
+        }
+        .gauge-label {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #64748B;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
             margin-bottom: 0.25rem;
         }
-        .evidence-meta {
-            font-size: 0.78rem;
-            color: #64748B;
-            display: flex;
-            gap: 0.65rem;
-            align-items: center;
-            margin-bottom: 0.45rem;
+        .gauge-score-value {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #0F172A;
+            letter-spacing: -0.04em;
         }
-        .domain-pill {
-            background: #E0F2FE;
-            color: #0369A1;
-            padding: 0.1rem 0.45rem;
-            border-radius: 4px;
-            font-weight: 600;
+        .gauge-bar-container {
+            width: 100%;
+            height: 10px;
+            background: #E2E8F0;
+            border-radius: 9999px;
+            overflow: hidden;
+            margin-top: 0.6rem;
         }
-        .domain-pill-auth {
-            background: #DCFCE7;
-            color: #15803D;
-            padding: 0.1rem 0.45rem;
-            border-radius: 4px;
-            font-weight: 600;
-        }
-        .evidence-snippet {
-            font-size: 0.875rem;
-            color: #334155;
-            line-height: 1.5;
-            background: #FFFFFF;
-            border-left: 3px solid #CBD5E1;
-            padding: 0.5rem 0.75rem;
-            border-radius: 0 4px 4px 0;
-        }
-        .query-tag {
-            background: #F1F5F9;
-            color: #475569;
-            padding: 0.15rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            font-family: monospace;
+        .gauge-bar-fill {
+            height: 100%;
+            border-radius: 9999px;
+            transition: width 0.5s ease;
         }
 
         /* Visual Breakdown Bar */
@@ -284,83 +473,279 @@ def inject_custom_styles() -> None:
             margin: 0.75rem 0 1rem 0;
             box-shadow: inset 0 1px 2px rgba(0,0,0,0.06);
         }
-        .bar-segment-verified {
-            background-color: #16A34A;
-            transition: width 0.3s ease;
-        }
-        .bar-segment-inaccurate {
-            background-color: #D97706;
-            transition: width 0.3s ease;
-        }
-        .bar-segment-false {
-            background-color: #DC2626;
-            transition: width 0.3s ease;
-        }
-        .bar-segment-unverified {
-            background-color: #94A3B8;
-            transition: width 0.3s ease;
-        }
+        .bar-segment-verified { background-color: #16A34A; }
+        .bar-segment-inaccurate { background-color: #D97706; }
+        .bar-segment-false { background-color: #DC2626; }
+        .bar-segment-unverified { background-color: #94A3B8; }
 
-        /* Status Legend Chips */
         .status-legend-row {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.75rem;
-            margin-bottom: 1.25rem;
+            gap: 1.25rem;
+            margin-bottom: 1.5rem;
         }
         .legend-chip {
             display: inline-flex;
             align-items: center;
-            gap: 0.4rem;
-            font-size: 0.8rem;
+            gap: 0.45rem;
+            font-size: 0.85rem;
             color: #334155;
-            font-weight: 500;
+            font-weight: 600;
         }
         .legend-dot {
-            width: 10px;
-            height: 10px;
+            width: 9px;
+            height: 9px;
             border-radius: 50%;
-            display: inline-block;
         }
 
-        /* Evidence Type Badges */
-        .type-pill-supporting {
+        /* Claim Cards (parafactai.com style) */
+        .parafact-claim-card {
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-radius: 14px;
+            padding: 1.5rem;
+            margin-bottom: 1.25rem;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.02);
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .parafact-claim-card:hover {
+            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+            border-color: #CBD5E1;
+        }
+        .claim-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.85rem;
+        }
+        .claim-meta-badges {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .badge-page-pill {
+            background: #F1F5F9;
+            color: #475569;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+        }
+        .badge-conf-pill {
+            background: #EFF6FF;
+            color: #1E40AF;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+        }
+        .badge-verified {
             background-color: #DCFCE7;
-            color: #166534;
-            padding: 0.15rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.72rem;
+            color: #15803D;
+            font-size: 0.8rem;
             font-weight: 700;
-            letter-spacing: 0.03em;
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            border: 1px solid #BBF7D0;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
         }
-        .type-pill-contradicting {
+        .badge-inaccurate {
+            background-color: #FEF3C7;
+            color: #B45309;
+            font-size: 0.8rem;
+            font-weight: 700;
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            border: 1px solid #FDE68A;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+        .badge-false {
             background-color: #FEE2E2;
-            color: #991B1B;
-            padding: 0.15rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.72rem;
+            color: #B91C1C;
+            font-size: 0.8rem;
             font-weight: 700;
-            letter-spacing: 0.03em;
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            border: 1px solid #FECACA;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
         }
-        .type-pill-contextual {
-            background-color: #EFF6FF;
-            color: #1D4ED8;
-            padding: 0.15rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.72rem;
+        .badge-unverified {
+            background-color: #F1F5F9;
+            color: #64748B;
+            font-size: 0.8rem;
             font-weight: 700;
-            letter-spacing: 0.03em;
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            border: 1px solid #E2E8F0;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
         }
 
-        /* Empty State */
-        .empty-filter-card {
-            background: #F8FAFC;
-            border: 1px dashed #CBD5E1;
+        .original-claim-text {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #0F172A;
+            line-height: 1.5;
+            margin-bottom: 0.85rem;
+        }
+
+        /* Diff style Correction Box */
+        .diff-correction-box {
+            background: #FEF2F2;
+            border: 1px solid #FECACA;
+            border-left: 4px solid #DC2626;
             border-radius: 8px;
-            padding: 2rem;
-            text-align: center;
+            padding: 0.85rem 1rem;
+            margin: 0.85rem 0;
+            font-size: 0.9rem;
+        }
+        .diff-verified-box {
+            background: #F0FDF4;
+            border: 1px solid #BBF7D0;
+            border-left: 4px solid #16A34A;
+            border-radius: 8px;
+            padding: 0.85rem 1rem;
+            margin: 0.85rem 0;
+            font-size: 0.9rem;
+        }
+        .diff-label-stated {
+            font-weight: 700;
+            color: #991B1B;
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+        .diff-label-fact {
+            font-weight: 700;
+            color: #15803D;
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+
+        .explanation-text {
+            font-size: 0.92rem;
+            color: #334155;
+            line-height: 1.6;
+            margin-bottom: 0.85rem;
+        }
+
+        /* Evidence source box */
+        .evidence-box {
+            background: #F8FAFC;
+            border: 1px solid #E2E8F0;
+            border-radius: 8px;
+            padding: 0.85rem 1rem;
+            margin-top: 0.65rem;
+            margin-bottom: 0.65rem;
+        }
+        .evidence-title {
+            font-size: 0.92rem;
+            font-weight: 600;
+            color: #0F172A;
+            margin-bottom: 0.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .evidence-meta {
+            font-size: 0.78rem;
             color: #64748B;
-            margin: 1.5rem 0;
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            margin-bottom: 0.45rem;
+        }
+        .domain-pill {
+            background: #EFF6FF;
+            color: #1D4ED8;
+            padding: 0.1rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        .evidence-snippet {
+            font-size: 0.85rem;
+            color: #334155;
+            line-height: 1.5;
+            background: #FFFFFF;
+            border-left: 3px solid #CBD5E1;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0 4px 4px 0;
+        }
+
+        /* Loading Stepper Experience */
+        .stepper-container {
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-radius: 16px;
+            padding: 2.5rem 2rem;
+            margin: 2rem auto;
+            max-width: 680px;
+            box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
+            text-align: center;
+        }
+        .stepper-header {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: #0F172A;
+            margin-bottom: 0.5rem;
+        }
+        .stepper-desc {
+            font-size: 0.95rem;
+            color: #64748B;
+            margin-bottom: 2rem;
+        }
+        .stepper-row {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            text-align: left;
+            max-width: 480px;
+            margin: 0 auto;
+        }
+        .step-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.65rem 1rem;
+            border-radius: 8px;
+            background: #F8FAFC;
+            border: 1px solid #E2E8F0;
+        }
+        .step-item.active {
+            background: #EFF6FF;
+            border-color: #93C5FD;
+        }
+        .step-num {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #CBD5E1;
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .step-item.active .step-num {
+            background: #2563EB;
+        }
+        .step-item.completed .step-num {
+            background: #16A34A;
+        }
+        .step-text {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #334155;
+        }
+        .step-item.active .step-text {
+            color: #1E40AF;
         }
         </style>
         """,
@@ -368,16 +753,20 @@ def inject_custom_styles() -> None:
     )
 
 
-def render_brand_header() -> None:
-    """Render top brand identity and tagline."""
+def render_top_navigation(active_tab: str = "Dashboard") -> None:
+    """Render top brand identity, navigation links, and user status."""
     st.markdown(
-        """
+        f"""
         <div class="brand-header">
-            <div class="brand-title">
-                🛡️ TruthLayer
+            <div class="brand-left">
+                <div class="brand-title">
+                    <div class="brand-icon">🛡️</div>
+                    <span>TruthLayer</span>
+                </div>
             </div>
-            <div class="brand-tagline">
-                Verify Facts. Build Trust.
+            <div class="brand-right">
+                <span class="status-pill-online">● System Ready</span>
+                <div class="user-avatar" title="Active Analyst Account">TL</div>
             </div>
         </div>
         """,
@@ -385,22 +774,14 @@ def render_brand_header() -> None:
     )
 
 
-def render_hero_section() -> None:
-    """Render the hero introduction and persona badges."""
+def render_hero_heading() -> None:
+    """Render the primary heading and subtitle."""
     st.markdown(
         """
-        <div class="hero-section">
-            <div class="hero-heading">AI-Powered PDF Fact-Checking</div>
-            <div class="hero-description">
-                Upload your business document, report, or whitepaper. TruthLayer extracts factual claims,
-                cross-references live web evidence, and flags inaccurate or fabricated information.
-            </div>
-            <div class="persona-container">
-                <span class="persona-badge">Marketing Professionals</span>
-                <span class="persona-badge">Content Writers & Editors</span>
-                <span class="persona-badge">Business Analysts</span>
-                <span class="persona-badge">Researchers</span>
-                <span class="persona-badge">Agencies</span>
+        <div class="hero-title-area">
+            <div class="main-heading">Verify what's inside <span>your documents.</span></div>
+            <div class="main-subtitle">
+                Upload a PDF and let TruthLayer identify, research and verify factual claims using reliable sources.
             </div>
         </div>
         """,
@@ -408,57 +789,68 @@ def render_hero_section() -> None:
     )
 
 
-def render_feature_pillars() -> None:
-    """Render the 3 core value proposition cards."""
-    col1, col2, col3 = st.columns(3)
-    with col1:
+def render_how_it_works_section() -> None:
+    """Render the 4-step 'How it works / What happens to your documents' cards inspired by rundocs.ai."""
+    st.markdown('<div class="section-subhead">WHAT HAPPENS TO YOUR DOCUMENTS</div>', unsafe_allow_html=True)
+    c1, c2, c3, c4 = st.columns(4)
+
+    with c1:
         st.markdown(
             """
             <div class="feature-card">
-                <div class="feature-icon">🔍</div>
-                <div class="feature-title">Empirical Claim Parsing</div>
-                <div class="feature-text">Automatically identifies numbers, statistics, historical dates, and market metrics while filtering opinions.</div>
+                <div class="feature-icon-purple">📄</div>
+                <div class="feature-title">Step 1: Upload PDF</div>
+                <div class="feature-text">Drag & drop your marketing brief, research report or whitepaper.</div>
             </div>
             """,
             unsafe_allow_html=True,
         )
-    with col2:
+    with c2:
         st.markdown(
             """
             <div class="feature-card">
-                <div class="feature-icon">🌐</div>
-                <div class="feature-title">Live Web Verification</div>
-                <div class="feature-text">Corroborates claims against real-time, authoritative search data to catch outdated figures and hallucinations.</div>
+                <div class="feature-icon-yellow">🔍</div>
+                <div class="feature-title">Step 2: Extract Claims</div>
+                <div class="feature-text">AI isolates factual statements, statistics, and dates page-by-page.</div>
             </div>
             """,
             unsafe_allow_html=True,
         )
-    with col3:
+    with c3:
         st.markdown(
             """
             <div class="feature-card">
-                <div class="feature-icon">📑</div>
-                <div class="feature-title">Transparent Provenance</div>
-                <div class="feature-text">Provides traceable evidence URLs, publication dates, and suggested corrections before you publish.</div>
+                <div class="feature-icon-blue">🌐</div>
+                <div class="feature-title">Step 3: Web Verification</div>
+                <div class="feature-text">Tavily queries live authoritative sources to collect real-time evidence.</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with c4:
+        st.markdown(
+            """
+            <div class="feature-card">
+                <div class="feature-icon-green">🛡️</div>
+                <div class="feature-title">Step 4: Review Analysis</div>
+                <div class="feature-text">Audit transparent ratings, verified corrections, and citation provenance.</div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
 
-def render_document_card(file_name: str, formatted_size: str, page_count: Optional[int] = None) -> None:
-    """Render structured details of a validated uploaded PDF."""
+def render_selected_document_card(file_name: str, formatted_size: str, page_count: Optional[int] = None) -> None:
+    """Render a clean card representing the selected PDF file."""
     page_info = f" • {page_count} pages" if page_count else ""
     st.markdown(
         f"""
-        <div class="doc-card">
-            <div class="doc-card-header">
+        <div class="selected-doc-card">
+            <div class="selected-doc-info">
+                <div class="pdf-icon-badge">PDF</div>
                 <div>
-                    <div class="doc-name">📄 {file_name}</div>
-                    <div class="doc-meta">File Size: {formatted_size}{page_info}</div>
-                </div>
-                <div class="status-pill-valid">
-                    ✓ Validated PDF Document
+                    <div class="doc-title-text">{file_name}</div>
+                    <div class="doc-meta-text">{formatted_size}{page_info} • Supported format: PDF</div>
                 </div>
             </div>
         </div>
@@ -467,192 +859,81 @@ def render_document_card(file_name: str, formatted_size: str, page_count: Option
     )
 
 
-def render_extraction_preview(extraction_result: PDFExtractionResult) -> None:
-    """Render page-by-page extracted text preview with stats and empty page indicators."""
-    st.subheader("Extracted Document Content")
+def render_credibility_score_card(report: VerificationReport) -> None:
+    """Render overall document accuracy/credibility score inspired by parafactai.com."""
+    tot = max(1, report.total_claims)
+    accuracy_score = int(round((report.verified_count / tot) * 100))
 
-    m1, m2, m3 = st.columns(3)
-    with m1:
-        st.metric("Total Pages", f"{extraction_result.total_pages}")
-    with m2:
-        st.metric("Extracted Characters", f"{extraction_result.total_characters:,}")
-    with m3:
-        non_empty_count = sum(1 for p in extraction_result.pages if not p.is_empty)
-        st.metric("Text-Bearing Pages", f"{non_empty_count} of {extraction_result.total_pages}")
+    if accuracy_score >= 80:
+        bar_color = "#16A34A"
+        grade_text = "High Credibility"
+        grade_badge = '<span style="color: #16A34A; font-weight: 700; background: #DCFCE7; padding: 0.2rem 0.6rem; border-radius: 6px;">✓ High Credibility</span>'
+    elif accuracy_score >= 50:
+        bar_color = "#D97706"
+        grade_text = "Moderate Credibility"
+        grade_badge = '<span style="color: #D97706; font-weight: 700; background: #FEF3C7; padding: 0.2rem 0.6rem; border-radius: 6px;">⚠️ Needs Review</span>'
+    else:
+        bar_color = "#DC2626"
+        grade_text = "Low Credibility"
+        grade_badge = '<span style="color: #DC2626; font-weight: 700; background: #FEE2E2; padding: 0.2rem 0.6rem; border-radius: 6px;">✕ Low Credibility</span>'
 
-    st.write("")
-
-    for page in extraction_result.pages:
-        header = f"Page {page.page_number} ({page.character_count:,} characters)"
-        if page.is_empty:
-            header += " — [EMPTY PAGE]"
-
-        with st.expander(header, expanded=(page.page_number == 1 and not page.is_empty)):
-            if page.is_empty:
-                st.markdown(
-                    f'<div class="empty-page-alert">⚠️ Page {page.page_number}: No extractable text found on this page.</div>',
-                    unsafe_allow_html=True,
-                )
-            else:
-                st.text_area(
-                    label=f"Content for Page {page.page_number}",
-                    value=page.text,
-                    height=180,
-                    disabled=True,
-                    key=f"preview_page_{page.page_number}",
-                )
-
-
-def render_claims_list(claims_result: ClaimExtractionResponse) -> None:
-    """Render structured cards for all extracted claims."""
-    st.subheader(f"Extracted Factual Claims ({claims_result.total_claims})")
-    model_badge = claims_result.extraction_model_used or "AI Model"
-    st.caption(f"Identified using **{model_badge}**. All claims are isolated and ready for live web verification.")
-
-    if claims_result.total_claims == 0:
-        st.info("No factual claims were identified in this document.")
-        return
-
-    claim_types = sorted(list(set(c.claim_type for c in claims_result.claims)))
-    filter_col, search_col = st.columns([1, 2])
-    with filter_col:
-        selected_type = st.selectbox(
-            "Filter by Claim Type",
-            options=["All Types"] + claim_types,
-            key="filter_claim_type",
-        )
-    with search_col:
-        search_query = st.text_input(
-            "Search within extracted claims",
-            placeholder="Type keyword or number...",
-            key="search_claims_query",
-        )
-
-    filtered_claims = claims_result.claims
-    if selected_type != "All Types":
-        filtered_claims = [c for c in filtered_claims if c.claim_type == selected_type]
-    if search_query.strip():
-        q = search_query.strip().lower()
-        filtered_claims = [c for c in filtered_claims if q in c.original_claim.lower()]
-
-    st.write(f"Showing **{len(filtered_claims)}** of {claims_result.total_claims} claims:")
-
-    for claim in filtered_claims:
-        entity_pills = "".join(f'<span class="pill-entity">🏷️ {e}</span>' for e in claim.entities)
-        number_pills = "".join(f'<span class="pill-number">🔢 {n}</span>' for n in claim.numbers)
-        date_pills = "".join(f'<span class="pill-date">📅 {d}</span>' for d in claim.dates)
-
-        st.markdown(
-            f"""
-            <div class="claim-card">
-                <div class="claim-header">
-                    <div class="claim-badges">
-                        <span class="badge-id">{claim.claim_id}</span>
-                        <span class="badge-page">Page {claim.page_number}</span>
-                        <span class="badge-type">{claim.claim_type}</span>
-                    </div>
+    st.markdown(
+        f"""
+        <div class="credibility-gauge-card">
+            <div class="gauge-info">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <div class="gauge-label">Writing & Document Credibility Score</div>
+                    <div>{grade_badge}</div>
                 </div>
-                <div class="claim-body">"{claim.original_claim}"</div>
-                <div class="claim-meta-row">
-                    {entity_pills}
-                    {number_pills}
-                    {date_pills}
+                <div class="gauge-score-value">{accuracy_score}% <span style="font-size: 1rem; color: #64748B; font-weight: 500;">({report.verified_count} of {report.total_claims} claims verified)</span></div>
+                <div class="gauge-bar-container">
+                    <div class="gauge-bar-fill" style="width: {accuracy_score}%; background: {bar_color};"></div>
                 </div>
             </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
-def render_evidence_drawer(evidence_result: DocumentEvidenceResult) -> None:
-    """Render structured live web evidence records with clickable links and source provenance."""
-    st.subheader(f"Live Web Evidence Retrieval ({evidence_result.total_sources_retrieved} Sources)")
-    st.caption("Live search results retrieved via Tavily Search API. Ready for fact verification.")
-
-    em1, em2, em3 = st.columns(3)
-    with em1:
-        st.metric("Researched Claims", f"{evidence_result.total_claims_researched}")
-    with em2:
-        st.metric("Sources Retrieved", f"{evidence_result.total_sources_retrieved}")
-    with em3:
-        avg_src = (
-            f"{evidence_result.total_sources_retrieved / max(1, evidence_result.total_claims_researched):.1f}"
-        )
-        st.metric("Avg Sources / Claim", avg_src)
-
-    st.write("")
-
-    for claim_rec in evidence_result.claims_evidence:
-        source_count = len(claim_rec.evidence)
-        status_label = f"({source_count} sources)" if source_count > 0 else "— [NO SOURCES FOUND]"
-        header_title = f"{claim_rec.claim_id}: \"{claim_rec.original_claim[:70]}...\" {status_label}"
-
-        with st.expander(header_title, expanded=(source_count > 0)):
-            st.markdown(f"**Target Claim:** *\"{claim_rec.original_claim}\"*")
-            queries_html = " ".join(f'<span class="query-tag">🔍 {q}</span>' for q in claim_rec.search_queries)
-            st.markdown(f"**Targeted Queries Executed:** {queries_html}", unsafe_allow_html=True)
-            st.write("")
-
-            if not claim_rec.evidence:
-                st.warning(
-                    f"⚠️ **No external web evidence found for {claim_rec.claim_id}.** "
-                    "This claim will conservatively default to `Unverified` during verification reasoning."
-                )
-            else:
-                for idx, ev in enumerate(claim_rec.evidence, start=1):
-                    is_auth = (
-                        any(ev.source_domain.endswith(tld) for tld in (".gov", ".edu", ".org", ".int"))
-                        or ev.source_domain in ["reuters.com", "bloomberg.com", "apnews.com", "bbc.com", "wsj.com"]
-                    )
-                    domain_class = "domain-pill-auth" if is_auth else "domain-pill"
-                    date_info = f"📅 Published: {ev.publication_date}" if ev.publication_date else "📅 Date not specified"
-                    score_info = f" • Match Score: {int(ev.relevance_score * 100)}%" if ev.relevance_score else ""
-
-                    st.markdown(
-                        f"""
-                        <div class="evidence-box">
-                            <div class="evidence-title">
-                                <a href="{ev.source_url}" target="_blank" style="color: #2563EB; text-decoration: none; font-weight: 600;">
-                                    🔗 {idx}. {ev.source_title}
-                                </a>
-                            </div>
-                            <div class="evidence-meta">
-                                <span class="{domain_class}">🌐 {ev.source_domain}</span>
-                                <span>{date_info}{score_info}</span>
-                            </div>
-                            <div class="evidence-snippet">
-                                "{ev.content_snippet}"
-                            </div>
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-
-
-def render_verification_results(report: VerificationReport) -> None:
-    """Render executive scorecard, visual status breakdown, download buttons, and verified claim cards."""
-    st.subheader("Document Fact-Checking Dashboard")
+def render_verification_results(report: VerificationReport, on_reset_callback: Optional[Callable[[], None]] = None) -> None:
+    """Render executive scorecard, visual breakdown, claim verification cards, and exports."""
     date_str = (
         report.processed_at.strftime("%B %d, %Y • %H:%M UTC")
         if hasattr(report.processed_at, "strftime")
         else str(report.processed_at)
     )
-    st.caption(f"Comprehensive audit for `{report.document_name}` • Evaluated on {date_str} • {report.total_claims} claim(s) analyzed.")
 
-    # 1. Executive Scorecard Metrics
+    # Header with metadata & Actions
+    h_col1, h_col2 = st.columns([3, 1])
+    with h_col1:
+        st.markdown(f"### Analysis Overview: `{report.document_name}`")
+        st.caption(f"Evaluated on {date_str} • {report.total_pages} page(s) • {report.total_claims} factual claim(s) audited.")
+    with h_col2:
+        if st.button("🔄 Analyze Another Document", use_container_width=True, key="btn_reset_from_results"):
+            if on_reset_callback:
+                on_reset_callback()
+            st.rerun()
+
+    st.write("")
+
+    # 1. Credibility Score Card (parafactai.com)
+    render_credibility_score_card(report)
+
+    # 2. Executive Metric Scorecards (basebright.ai style)
     sc1, sc2, sc3, sc4, sc5 = st.columns(5)
     with sc1:
         st.metric("Total Claims", f"{report.total_claims}")
     with sc2:
-        st.metric("🟢 Verified", f"{report.verified_count}")
+        st.metric("Verified", f"{report.verified_count}", delta="Supported" if report.verified_count > 0 else None)
     with sc3:
-        st.metric("🟠 Inaccurate", f"{report.inaccurate_count}")
+        st.metric("Inaccurate", f"{report.inaccurate_count}", delta="Minor discrepancy" if report.inaccurate_count > 0 else None, delta_color="inverse")
     with sc4:
-        st.metric("🔴 False", f"{report.false_count}")
+        st.metric("False", f"{report.false_count}", delta="Refuted" if report.false_count > 0 else None, delta_color="inverse")
     with sc5:
-        st.metric("⚪ Unverified", f"{report.unverified_count}")
+        st.metric("Unverified", f"{report.unverified_count}", delta="No web evidence" if report.unverified_count > 0 else None, delta_color="off")
 
-    # 2. Visual Breakdown Bar
+    # 3. Visual Breakdown Bar
     tot = max(1, report.total_claims)
     pct_v = round((report.verified_count / tot) * 100, 1)
     pct_i = round((report.inaccurate_count / tot) * 100, 1)
@@ -677,17 +958,14 @@ def render_verification_results(report: VerificationReport) -> None:
         unsafe_allow_html=True,
     )
 
-    # 3. Downloadable Reports Section
-    st.markdown("#### Export Audit Reports")
-    dl_col1, dl_col2, dl_col3 = st.columns(3)
-
-    # Pre-generate downloadable artifacts
+    # 4. Export Buttons
+    st.markdown("#### Document Comparison & Export")
     pdf_bytes = generate_pdf_report(report)
     md_text = generate_markdown_report(report)
     json_text = generate_json_report(report)
-
     clean_base_name = report.document_name.replace(".pdf", "").replace(" ", "_")
 
+    dl_col1, dl_col2, dl_col3 = st.columns(3)
     with dl_col1:
         st.download_button(
             label="📄 Download PDF Audit Report",
@@ -695,7 +973,7 @@ def render_verification_results(report: VerificationReport) -> None:
             file_name=f"{clean_base_name}_verification_audit.pdf",
             mime="application/pdf",
             use_container_width=True,
-            key="btn_download_pdf",
+            key="btn_dl_pdf",
         )
     with dl_col2:
         st.download_button(
@@ -704,49 +982,49 @@ def render_verification_results(report: VerificationReport) -> None:
             file_name=f"{clean_base_name}_verification_report.md",
             mime="text/markdown",
             use_container_width=True,
-            key="btn_download_md",
+            key="btn_dl_md",
         )
     with dl_col3:
         st.download_button(
-            label="⚙️ Download Data Certificate (.json)",
+            label="⚙️ Download JSON Certificate",
             data=json_text,
             file_name=f"{clean_base_name}_verification_data.json",
             mime="application/json",
             use_container_width=True,
-            key="btn_download_json",
+            key="btn_dl_json",
         )
 
     st.write("")
-    st.markdown("---")
+    st.divider()
 
-    # 4. Filter Bar & Search Controls
+    # 5. Filter & Search Controls (parafactai.com)
+    st.markdown("### Factcheck Results")
     filter_col, search_col = st.columns([1, 2])
     with filter_col:
         status_options = [
-            f"All Statuses ({report.total_claims})",
+            f"All Claims ({report.total_claims})",
             f"Verified ({report.verified_count})",
             f"Inaccurate ({report.inaccurate_count})",
             f"False ({report.false_count})",
             f"Unverified ({report.unverified_count})",
         ]
         selected_option = st.selectbox(
-            "Filter by Verification Status",
+            "Filter by Status",
             options=status_options,
-            key="verify_status_filter_selector",
+            key="results_status_filter",
         )
-        # Parse status keyword from option
         status_filter = selected_option.split(" (")[0]
 
     with search_col:
         search_kw = st.text_input(
-            "Search within verified claims or explanations",
-            placeholder="Type keyword, entity, or number...",
-            key="verify_search_keyword",
+            "Search within extracted claims",
+            placeholder="Type keyword, figure, or entity...",
+            key="results_search_kw",
         )
 
-    # Apply Filtering
+    # Filter logic
     filtered_results = report.results
-    if status_filter != "All Statuses":
+    if status_filter != "All Claims":
         filtered_results = [
             r for r in filtered_results if r.status.value.lower() == status_filter.lower()
         ]
@@ -762,143 +1040,86 @@ def render_verification_results(report: VerificationReport) -> None:
             )
         ]
 
-    st.write(f"Displaying **{len(filtered_results)}** of {report.total_claims} claims:")
+    st.caption(f"Showing **{len(filtered_results)}** of {report.total_claims} claims:")
 
-    # 5. Empty State Handling
     if not filtered_results:
-        st.markdown(
-            f"""
-            <div class="empty-filter-card">
-                <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🔍</div>
-                <div style="font-weight: 600; font-size: 1rem; color: #0F172A; margin-bottom: 0.25rem;">
-                    No claims match your current filter criteria
-                </div>
-                <div>Filter: <code>{status_filter}</code> | Query: <code>{search_kw or 'None'}</code></div>
-                <div style="margin-top: 0.5rem; font-size: 0.85rem;">
-                    Try selecting "All Statuses" or clearing your search keywords.
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        st.info("No claims matched your current filter criteria.")
         return
 
-    # 6. Individual Claim Cards
+    # 6. Render Individual Claim Cards (parafactai.com style)
     for item in filtered_results:
-        # Determine badge style
         if item.status == VerificationStatus.VERIFIED:
-            badge_html = '<span class="badge-verified">✓ VERIFIED</span>'
+            status_badge = '<span class="badge-verified">✓ Verified</span>'
             border_color = "#16A34A"
         elif item.status == VerificationStatus.INACCURATE:
-            badge_html = '<span class="badge-inaccurate">⚠️ INACCURATE</span>'
+            status_badge = '<span class="badge-inaccurate">⚠️ Inaccurate</span>'
             border_color = "#D97706"
         elif item.status == VerificationStatus.FALSE:
-            badge_html = '<span class="badge-false">✕ FALSE</span>'
+            status_badge = '<span class="badge-false">✕ False</span>'
             border_color = "#DC2626"
         else:
-            badge_html = '<span class="badge-unverified">? UNVERIFIED</span>'
+            status_badge = '<span class="badge-unverified">? Unverified</span>'
             border_color = "#94A3B8"
 
-        # Confidence qualitative context
         conf_pct = int(item.confidence * 100)
-        if item.confidence >= 0.90:
-            conf_label = f"Confidence: {conf_pct}% (High Confidence)"
-        elif item.confidence >= 0.70:
-            conf_label = f"Confidence: {conf_pct}% (Moderate Confidence)"
-        elif item.confidence > 0.0:
-            conf_label = f"Confidence: {conf_pct}% (Low Confidence)"
-        else:
-            conf_label = "Confidence: 0% (No Evidence Found)"
+        conf_pill = f'<span class="badge-conf-pill">{conf_pct}% Confidence</span>' if conf_pct > 0 else '<span class="badge-conf-pill" style="background:#F1F5F9; color:#64748B;">No Web Evidence</span>'
 
         st.markdown(
             f"""
-            <div class="verify-card" style="border-left: 4px solid {border_color};">
-                <div class="verify-card-header">
-                    <div>
-                        <span class="badge-id">{item.claim_id}</span>
-                        <span class="badge-page">Page {item.page_number}</span>
-                        <span style="font-size: 0.8rem; color: #64748B; margin-left: 0.5rem;">{conf_label}</span>
+            <div class="parafact-claim-card" style="border-left: 4px solid {border_color};">
+                <div class="claim-card-header">
+                    <div class="claim-meta-badges">
+                        <span class="badge-page-pill">Page {item.page_number}</span>
+                        <span class="badge-page-pill">{item.claim_type}</span>
+                        {conf_pill}
                     </div>
                     <div>
-                        {badge_html}
+                        {status_badge}
                     </div>
                 </div>
-                <div style="font-size: 1.05rem; font-weight: 700; color: #0F172A; margin-bottom: 0.5rem;">
+                <div class="original-claim-text">
                     "{item.claim_text}"
                 </div>
                 <div class="explanation-text">
-                    <strong>Evaluation:</strong> {item.explanation}
+                    <strong>Justification:</strong> {item.explanation}
                 </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-        # Show correction if available
+        # Verified correction if inaccurate or false
         if item.corrected_information:
             st.markdown(
                 f"""
-                <div class="correction-box">
-                    <strong>💡 Verified Correction:</strong> {item.corrected_information}
+                <div class="diff-verified-box">
+                    <span class="diff-label-fact">💡 Verified Correction:</span>
+                    <div>{item.corrected_information}</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
 
-        # Show evidence summary if available
-        if item.evidence_summary:
-            st.markdown(
-                f"""
-                <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 0.65rem 0.85rem; font-size: 0.875rem; color: #475569; margin-bottom: 0.5rem;">
-                    <strong>🔍 Evidence Summary:</strong> {item.evidence_summary}
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-        # Show verification notes if available
-        if item.verification_notes:
-            st.markdown(
-                f"""
-                <div style="background: #FFFBEB; border-left: 3px solid #F59E0B; border-radius: 0 4px 4px 0; padding: 0.5rem 0.75rem; font-size: 0.85rem; color: #92400E; margin-bottom: 0.5rem;">
-                    <strong>📌 Context & Reporting Notes:</strong> {item.verification_notes}
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-        # Citations expander
+        # Supporting & Contradicting Evidence Source Accordion
         if item.sources:
-            with st.expander(f"📚 View {len(item.sources)} Corroborating Source Citations for {item.claim_id}"):
+            with st.expander(f"🔗 View {len(item.sources)} Verified Sources & Excerpts for {item.claim_id}"):
                 for s_idx, src in enumerate(item.sources, start=1):
-                    pub_str = f" • Published: {src.publication_date}" if src.publication_date else " • Date not specified"
-                    
-                    # Pill class based on evidence_type
-                    ev_type = (src.evidence_type or "supporting").lower()
-                    if ev_type == "supporting":
-                        pill_class = "type-pill-supporting"
-                        type_label = "Supporting"
-                    elif ev_type == "contradicting":
-                        pill_class = "type-pill-contradicting"
-                        type_label = "Contradicting"
-                    else:
-                        pill_class = "type-pill-contextual"
-                        type_label = "Contextual"
-
+                    pub_info = f" • Published: {src.publication_date}" if src.publication_date else ""
+                    type_label = (src.evidence_type or "Supporting").capitalize()
                     snippet_html = f'<div class="evidence-snippet">"{src.content_snippet}"</div>' if src.content_snippet else ""
 
                     st.markdown(
                         f"""
                         <div class="evidence-box">
                             <div class="evidence-title">
-                                <span class="{pill_class}">{type_label}</span>
-                                <a href="{src.url}" target="_blank" style="color: #2563EB; text-decoration: none; font-weight: 600; margin-left: 0.35rem;">
-                                    🔗 {s_idx}. {src.title}
+                                <a href="{src.url}" target="_blank" style="color: #2563EB; text-decoration: none; font-weight: 600;">
+                                    {s_idx}. {src.title}
                                 </a>
+                                <span class="format-pill">{type_label}</span>
                             </div>
                             <div class="evidence-meta">
                                 <span class="domain-pill">🌐 {src.source_domain}</span>
-                                <span>{pub_str}</span>
+                                <span>{pub_info}</span>
                             </div>
                             {snippet_html}
                         </div>

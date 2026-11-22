@@ -29,9 +29,9 @@ class Settings(BaseSettings):
 
     # AI Orchestration - Primary (Gemini) and Fallback (Groq)
     gemini_api_key: Optional[str] = Field(default=None, description="Google Gemini API key")
-    gemini_model: str = Field(default="gemini-2.5-flash", description="Gemini model name")
+    gemini_model: str = Field(default="gemini-3.5-flash-lite", description="Gemini model name")
     groq_api_key: Optional[str] = Field(default=None, description="Groq API key for fallback")
-    groq_model: str = Field(default="llama-3.3-70b-versatile", description="Groq model name")
+    groq_model: str = Field(default="qwen/qwen3.8-27b", description="Groq model name")
 
     # Web Search API (Tavily)
     tavily_api_key: Optional[str] = Field(default=None, description="Tavily Search API key")
