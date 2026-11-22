@@ -159,7 +159,7 @@ def verify_with_gemini(prompt_text: str, api_key: str, model_name: str) -> Dict[
     full_prompt = f"{VERIFICATION_SYSTEM_PROMPT}\n\n{prompt_text}"
 
     candidate_models = [model_name]
-    for fallback_candidate in ["gemini-3.5-flash-lite", "gemini-2.5-flash-lite", "gemini-flash-lite-latest", "gemini-3.5-flash"]:
+    for fallback_candidate in ["gemini-3.5-flash-lite", "gemini-2.5-flash", "gemini-flash-lite-latest", "gemini-3.5-flash"]:
         if fallback_candidate not in candidate_models:
             candidate_models.append(fallback_candidate)
 

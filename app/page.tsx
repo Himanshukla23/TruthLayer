@@ -18,6 +18,13 @@ import {
 } from '@/types';
 import { Search } from 'lucide-react';
 
+const getApiBase = () => {
+  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    return 'http://127.0.0.1:8000';
+  }
+  return '';
+};
+
 async function runConcurrent<T, R>(
   items: T[],
   concurrency: number,
@@ -116,7 +123,7 @@ export default function Home() {
       const formData = new FormData();
       formData.append('file', selectedFile);
 
-      const extractRes = await fetch('/api/py/extract-claims', {
+      const extractRes = await fetch(`${getApiBase()}/api/py/extract-claims`, {
         method: 'POST',
         body: formData,
       });
@@ -173,7 +180,7 @@ export default function Home() {
         async (claim) => {
           for (let attempt = 0; attempt < 2; attempt++) {
             try {
-              const verifyRes = await fetch('/api/py/verify-single-claim', {
+              const verifyRes = await fetch(`${getApiBase()}/api/py/verify-single-claim`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -266,7 +273,7 @@ export default function Home() {
         // Step 1: Extract Text
         const formData = new FormData();
         formData.append('file', selectedFile);
-        const res = await fetch('/api/py/extract-text', { method: 'POST', body: formData });
+        const res = await fetch(`${getApiBase()}/api/py/extract-text`, { method: 'POST', body: formData });
         if (!res.ok) throw new Error('Text extraction failed.');
         const data: PDFExtractionResult = await res.json();
         setPdfResult(data);
@@ -275,7 +282,7 @@ export default function Home() {
         // Step 2: Extract Claims
         const formData = new FormData();
         formData.append('file', selectedFile);
-        const res = await fetch('/api/py/extract-claims', { method: 'POST', body: formData });
+        const res = await fetch(`${getApiBase()}/api/py/extract-claims`, { method: 'POST', body: formData });
         if (!res.ok) throw new Error('Claim extraction failed.');
         const data: ClaimExtractionResponse = await res.json();
         setClaimsResult(data);
@@ -289,7 +296,7 @@ export default function Home() {
           claimsResult.claims,
           4,
           async (claim) => {
-            const res = await fetch('/api/py/search-claim-evidence', {
+            const res = await fetch(`${getApiBase()}/api/py/search-claim-evidence`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(claim),
@@ -311,7 +318,7 @@ export default function Home() {
           claimsResult.claims,
           4,
           async (claim) => {
-            const res = await fetch('/api/py/verify-single-claim', {
+            const res = await fetch(`${getApiBase()}/api/py/verify-single-claim`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ claim, document_name: selectedFile.name }),
@@ -371,7 +378,7 @@ export default function Home() {
     setIsExporting(true);
 
     try {
-      const res = await fetch('/api/py/generate-report', {
+      const res = await fetch(`${getApiBase()}/api/py/generate-report`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
