@@ -69,6 +69,8 @@ def get_cached_tavily_client(api_key: str):
 
 
 @app.get("/api/py/health")
+@app.get("/api/health")
+@app.get("/health")
 async def health_check() -> Dict[str, Any]:
     """Health status and API integration readiness check."""
     settings = get_settings()
@@ -171,70 +173,94 @@ async def search_claim_evidence_endpoint(
 
 
 @app.post("/api/py/extract-claims", response_model=ClaimExtractionResponse)
+@app.post("/api/extract-claims", response_model=ClaimExtractionResponse)
+@app.post("/extract-claims", response_model=ClaimExtractionResponse)
 async def extract_claims_endpoint(
     file: UploadFile = File(...),
 ) -> ClaimExtractionResponse:
-    """Stage 1 & 2: Ingest PDF, extract text with PyMuPDF, and isolate empirical claims with Gemini."""
-    settings = get_settings()
-
-    if not file.filename:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No filename provided.",
-        )
-
-    # Read binary bytes into memory (zero disk footprint)
-    file_bytes = await file.read()
-
-    # Validate file format and size (enforce 4.0 MB limit for Vercel)
-    val_result = validate_uploaded_pdf(
-        file_name=file.filename,
-        file_bytes=file_bytes,
-        max_size_mb=4.0,
-    )
-
-    if not val_result.is_valid:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=val_result.error_message or "Invalid PDF document.",
-        )
-
-    # Step 1: Text extraction via PyMuPDF
-    extraction_result = extract_text_from_pdf(
-        file_name=file.filename,
-        file_bytes=file_bytes,
-        max_pages=settings.max_pdf_pages,
-    )
-
-    if extraction_result.is_scanned_document:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Scanned document detected. TruthLayer requires text-based PDFs. OCR is not yet supported.",
-        )
-
-    if extraction_result.total_characters == 0 or extraction_result.extraction_status == "empty":
-        return ClaimExtractionResponse(
-            document_name=file.filename,
-            total_claims=0,
-            claims=[],
-            extraction_model_used="None",
-            error_message="No extractable text found in this PDF.",
-        )
-
-    # Step 2: Empirical claim isolation via Gemini (with Groq fallback)
+    """Stage 1 & 2: Ingest PDF, extract text with PyMuPDF/pypdf, and isolate empirical claims with Gemini."""
     try:
-        claims_response = extract_claims_from_document(
-            extraction_result=extraction_result,
-            settings=settings,
+        settings = get_settings()
+
+        if not file.filename:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No filename provided.",
+            )
+
+        # Pre-check API key configuration
+        if not settings.has_active_llm:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Missing API Key: Please configure GEMINI_API_KEY in your Vercel Project Settings > Environment Variables, then redeploy.",
+            )
+
+        # Read binary bytes into memory (zero disk footprint)
+        file_bytes = await file.read()
+
+        # Validate file format and size (enforce 4.0 MB limit for Vercel)
+        val_result = validate_uploaded_pdf(
+            file_name=file.filename,
+            file_bytes=file_bytes,
+            max_size_mb=4.0,
         )
-        return claims_response
+
+        if not val_result.is_valid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=val_result.error_message or "Invalid PDF document.",
+            )
+
+        # Step 1: Text extraction via PyMuPDF with pypdf fallback
+        extraction_result = extract_text_from_pdf(
+            file_name=file.filename,
+            file_bytes=file_bytes,
+            max_pages=settings.max_pdf_pages,
+        )
+
+        if extraction_result.extraction_status == "failed":
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=extraction_result.error_message or "Failed to extract text from PDF.",
+            )
+
+        if extraction_result.is_scanned_document:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Scanned document detected. TruthLayer requires text-based PDFs. OCR is not yet supported.",
+            )
+
+        if extraction_result.total_characters == 0 or extraction_result.extraction_status == "empty":
+            return ClaimExtractionResponse(
+                document_name=file.filename,
+                total_claims=0,
+                claims=[],
+                extraction_model_used="None",
+                error_message="No extractable text found in this PDF.",
+            )
+
+        # Step 2: Empirical claim isolation via Gemini (with Groq fallback)
+        try:
+            claims_response = extract_claims_from_document(
+                extraction_result=extraction_result,
+                settings=settings,
+            )
+            return claims_response
+        except Exception as exc:
+            logger.error(f"Claim extraction encountered an error: {exc}", exc_info=True)
+            return ClaimExtractionResponse(
+                document_name=file.filename,
+                total_claims=0,
+                claims=[],
+                error_message=f"Claim extraction error: {str(exc)}",
+            )
+    except HTTPException:
+        raise
     except Exception as exc:
-        logger.error(f"Claim extraction encountered an error: {exc}", exc_info=True)
-        return ClaimExtractionResponse(
-            document_name=file.filename,
-            total_claims=0,
-            claims=[],
-            error_message=f"Claim extraction error: {str(exc)}",
+        logger.error(f"Unexpected extraction endpoint error: {exc}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Server extraction error: {str(exc)}",
         )
 
 
@@ -244,6 +270,8 @@ class VerifySingleClaimRequest(BaseModel):
 
 
 @app.post("/api/py/verify-single-claim", response_model=ClaimVerificationResult)
+@app.post("/api/verify-single-claim", response_model=ClaimVerificationResult)
+@app.post("/verify-single-claim", response_model=ClaimVerificationResult)
 async def verify_single_claim_endpoint(
     request: VerifySingleClaimRequest,
 ) -> ClaimVerificationResult:
@@ -341,6 +369,8 @@ class GenerateReportRequest(BaseModel):
 
 
 @app.post("/api/py/generate-report")
+@app.post("/api/generate-report")
+@app.post("/generate-report")
 async def generate_report_endpoint(request: GenerateReportRequest) -> Response:
     """Generate in-memory downloadable verification audit report in PDF, Markdown, or JSON."""
     report = request.report

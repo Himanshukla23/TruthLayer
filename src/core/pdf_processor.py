@@ -51,6 +51,77 @@ def clean_page_text(raw_text: str) -> str:
     return result
 
 
+def _extract_text_with_pypdf(
+    file_name: str,
+    file_bytes: bytes,
+    max_pages: Optional[int] = None,
+) -> PDFExtractionResult:
+    """Pure-Python fallback extractor using pypdf (zero C-library dependencies, 100% serverless safe)."""
+    import io
+    try:
+        import pypdf
+        reader = pypdf.PdfReader(io.BytesIO(file_bytes))
+
+        if reader.is_encrypted:
+            return PDFExtractionResult(
+                document_name=file_name,
+                total_pages=0,
+                extraction_status="failed",
+                error_message="Document is password-protected. Unencrypted PDFs are required.",
+            )
+
+        total_pages = len(reader.pages)
+        if total_pages == 0:
+            return PDFExtractionResult(
+                document_name=file_name,
+                total_pages=0,
+                extraction_status="failed",
+                error_message="Document contains 0 pages.",
+            )
+
+        pages_to_process = min(total_pages, max_pages) if max_pages and max_pages > 0 else total_pages
+        extracted_pages: List[PageExtraction] = []
+        total_characters = 0
+
+        for page_idx in range(pages_to_process):
+            page_number = page_idx + 1
+            page = reader.pages[page_idx]
+            raw_text = page.extract_text() or ""
+            cleaned_text = clean_page_text(raw_text)
+            char_count = len(cleaned_text)
+            is_empty = (char_count == 0)
+            if not is_empty:
+                total_characters += char_count
+
+            extracted_pages.append(
+                PageExtraction(
+                    page_number=page_number,
+                    text=cleaned_text,
+                    character_count=char_count,
+                    is_empty=is_empty,
+                )
+            )
+
+        logger.info(f"Successfully extracted text via pypdf fallback: {len(extracted_pages)} pages, {total_characters} characters.")
+        return PDFExtractionResult(
+            document_name=file_name,
+            total_pages=total_pages,
+            extraction_status="success" if total_characters > 0 else "empty",
+            pages=extracted_pages,
+            total_characters=total_characters,
+            is_scanned_document=(total_characters == 0),
+            error_message=None if total_characters > 0 else "Document contains no extractable text.",
+        )
+    except Exception as exc:
+        logger.error(f"pypdf fallback extraction failed for '{file_name}': {exc}")
+        return PDFExtractionResult(
+            document_name=file_name,
+            total_pages=0,
+            extraction_status="failed",
+            error_message=f"Corrupted or invalid PDF structure: {str(exc)}",
+        )
+
+
 def extract_text_from_pdf(
     file_name: str,
     file_bytes: bytes,
@@ -65,10 +136,6 @@ def extract_text_from_pdf(
 
     Returns:
         Structured PDFExtractionResult containing per-page extractions, totals, and status.
-
-    Raises:
-        PDFCorruptedError: When PDF cannot be opened or is malformed.
-        PDFPasswordProtectedError: When PDF is encrypted.
     """
     if not file_bytes:
         return PDFExtractionResult(
@@ -80,15 +147,11 @@ def extract_text_from_pdf(
 
     doc = None
     try:
+        import pymupdf
         doc = pymupdf.open(stream=file_bytes, filetype="pdf")
     except Exception as exc:
-        logger.error(f"Failed to open PDF '{file_name}': {exc}")
-        return PDFExtractionResult(
-            document_name=file_name,
-            total_pages=0,
-            extraction_status="failed",
-            error_message=f"Corrupted or invalid PDF structure: {str(exc)}",
-        )
+        logger.warning(f"PyMuPDF open failed for '{file_name}' ({exc}), trying pypdf fallback...")
+        return _extract_text_with_pypdf(file_name, file_bytes, max_pages)
 
     try:
         # Check for password encryption
@@ -204,6 +267,13 @@ def extract_text_from_pdf(
             error_message=None,
         )
 
+    except Exception as exc:
+        logger.warning(f"PyMuPDF page extraction error for '{file_name}' ({exc}), trying pypdf fallback...")
+        return _extract_text_with_pypdf(file_name, file_bytes, max_pages)
+
     finally:
         if doc is not None:
-            doc.close()
+            try:
+                doc.close()
+            except Exception:
+                pass

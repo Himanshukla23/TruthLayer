@@ -122,8 +122,19 @@ export default function Home() {
       });
 
       if (!extractRes.ok) {
-        const errData = await extractRes.json().catch(() => ({}));
-        throw new Error(errData.detail || `Extraction failed with HTTP ${extractRes.status}`);
+        let errMessage = `Extraction failed with HTTP ${extractRes.status}`;
+        try {
+          const errData = await extractRes.json();
+          if (errData && errData.detail) {
+            errMessage = typeof errData.detail === 'string' ? errData.detail : JSON.stringify(errData.detail);
+          }
+        } catch {
+          const text = await extractRes.text().catch(() => '');
+          if (text) {
+            errMessage = text.length > 250 ? text.slice(0, 250) + '...' : text;
+          }
+        }
+        throw new Error(errMessage);
       }
 
       setCurrentStage(3);
