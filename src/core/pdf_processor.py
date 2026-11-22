@@ -2,7 +2,6 @@
 
 import re
 from typing import List, Optional
-import pymupdf
 from src.models.schemas import PageExtraction, PDFExtractionResult
 from src.utils.logger import get_logger
 from src.utils.exceptions import (
