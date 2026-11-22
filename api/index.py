@@ -71,6 +71,8 @@ def get_cached_tavily_client(api_key: str):
 @app.get("/api/py/health")
 @app.get("/api/health")
 @app.get("/health")
+@app.get("/api")
+@app.get("/")
 async def health_check() -> Dict[str, Any]:
     """Health status and API integration readiness check."""
     settings = get_settings()
@@ -99,6 +101,8 @@ async def health_check() -> Dict[str, Any]:
 
 
 @app.post("/api/py/extract-text", response_model=PDFExtractionResult)
+@app.post("/api/extract-text", response_model=PDFExtractionResult)
+@app.post("/extract-text", response_model=PDFExtractionResult)
 async def extract_text_endpoint(
     file: UploadFile = File(...),
 ) -> PDFExtractionResult:
@@ -140,6 +144,8 @@ async def extract_text_endpoint(
 
 
 @app.post("/api/py/search-claim-evidence", response_model=ClaimEvidenceResult)
+@app.post("/api/search-claim-evidence", response_model=ClaimEvidenceResult)
+@app.post("/search-claim-evidence", response_model=ClaimEvidenceResult)
 async def search_claim_evidence_endpoint(
     claim: ExtractedClaimItem,
 ) -> ClaimEvidenceResult:
