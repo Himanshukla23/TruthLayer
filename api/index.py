@@ -45,6 +45,7 @@ app = FastAPI(
     docs_url="/api/py/docs",
     openapi_url="/api/py/openapi.json",
 )
+handler = app
 
 # Enable CORS for local development and Vercel deployments
 app.add_middleware(
