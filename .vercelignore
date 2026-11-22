@@ -1,0 +1,18 @@
+# Tests and development
+tests/
+.pytest_cache/
+requirements-dev.txt
+TEST_REPORT.md
+PROGRESS.md
+PROBLEM_STATEMENT.md
+
+# Legacy Streamlit files
+app.py
+src/ui/
+.streamlit/
+
+# Documentation and Git
+.git/
+.github/
+.vscode/
+.idea/
