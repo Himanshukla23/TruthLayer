@@ -277,7 +277,7 @@ def extract_claims_from_document(
             claims=[],
             error_message=(
                 "API credentials missing: Please provide GEMINI_API_KEY (or GROQ_API_KEY fallback) "
-                "in your .env file or Streamlit secrets to extract claims."
+                "in your .env file or environment variables to extract claims."
             ),
         )
 

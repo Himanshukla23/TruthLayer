@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     app_version: str = Field(default="0.1.0", description="Application version")
     app_env: str = Field(default="development", description="Environment: development, staging, production")
     log_level: str = Field(default="INFO", description="Log level: DEBUG, INFO, WARNING, ERROR")
-    port: int = Field(default=8501, description="Application port")
+    port: int = Field(default=8000, description="Application port")
 
     # Document Processing Limits
     max_upload_size_mb: int = Field(default=20, description="Max upload file size in megabytes")
@@ -35,20 +35,6 @@ class Settings(BaseSettings):
 
     # Web Search API (Tavily)
     tavily_api_key: Optional[str] = Field(default=None, description="Tavily Search API key")
-
-    def model_post_init(self, __context: Any) -> None:
-        """Resolve keys from Streamlit secrets if not present in environment."""
-        try:
-            import streamlit as st
-            if hasattr(st, "secrets"):
-                if not self.gemini_api_key and "GEMINI_API_KEY" in st.secrets:
-                    self.gemini_api_key = str(st.secrets["GEMINI_API_KEY"])
-                if not self.groq_api_key and "GROQ_API_KEY" in st.secrets:
-                    self.groq_api_key = str(st.secrets["GROQ_API_KEY"])
-                if not self.tavily_api_key and "TAVILY_API_KEY" in st.secrets:
-                    self.tavily_api_key = str(st.secrets["TAVILY_API_KEY"])
-        except Exception:
-            pass
 
     @property
     def is_gemini_configured(self) -> bool:

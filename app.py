@@ -1,23 +1,11 @@
 """TruthLayer - AI-Powered PDF Fact-Checking Application.
 
-Main Streamlit Application Entry Point.
+FastAPI serverless backend (api/index.py) + Next.js 14 frontend (app/).
 """
 
-import streamlit as st
-from src.ui.views import render_upload_dashboard
-
-# Application Page Configuration
-st.set_page_config(
-    page_title="TruthLayer — AI Document Fact-Checking",
-    page_icon="🛡️",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
-
-
 def main() -> None:
-    """Main application lifecycle runner."""
-    render_upload_dashboard()
+    """Print project info."""
+    print("TruthLayer: FastAPI backend located at api/index.py, Next.js frontend at app/")
 
 
 if __name__ == "__main__":

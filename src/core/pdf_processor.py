@@ -81,119 +81,22 @@ def _extract_text_with_pypdf(
         pages_to_process = min(total_pages, max_pages) if max_pages and max_pages > 0 else total_pages
         extracted_pages: List[PageExtraction] = []
         total_characters = 0
+        has_embedded_images = False
 
         for page_idx in range(pages_to_process):
             page_number = page_idx + 1
             page = reader.pages[page_idx]
+
+            if not has_embedded_images:
+                try:
+                    if len(page.images) > 0:
+                        has_embedded_images = True
+                except Exception:
+                    pass
+
             raw_text = page.extract_text() or ""
             cleaned_text = clean_page_text(raw_text)
             char_count = len(cleaned_text)
-            is_empty = (char_count == 0)
-            if not is_empty:
-                total_characters += char_count
-
-            extracted_pages.append(
-                PageExtraction(
-                    page_number=page_number,
-                    text=cleaned_text,
-                    character_count=char_count,
-                    is_empty=is_empty,
-                )
-            )
-
-        logger.info(f"Successfully extracted text via pypdf fallback: {len(extracted_pages)} pages, {total_characters} characters.")
-        return PDFExtractionResult(
-            document_name=file_name,
-            total_pages=total_pages,
-            extraction_status="success" if total_characters > 0 else "empty",
-            pages=extracted_pages,
-            total_characters=total_characters,
-            is_scanned_document=(total_characters == 0),
-            error_message=None if total_characters > 0 else "Document contains no extractable text.",
-        )
-    except Exception as exc:
-        logger.error(f"pypdf fallback extraction failed for '{file_name}': {exc}")
-        return PDFExtractionResult(
-            document_name=file_name,
-            total_pages=0,
-            extraction_status="failed",
-            error_message=f"Corrupted or invalid PDF structure: {str(exc)}",
-        )
-
-
-def extract_text_from_pdf(
-    file_name: str,
-    file_bytes: bytes,
-    max_pages: Optional[int] = None,
-) -> PDFExtractionResult:
-    """Extract text from uploaded PDF bytes page-by-page while preserving page numbers.
-
-    Args:
-        file_name: Name of the uploaded PDF file.
-        file_bytes: Binary content of the PDF.
-        max_pages: Optional maximum number of pages to process.
-
-    Returns:
-        Structured PDFExtractionResult containing per-page extractions, totals, and status.
-    """
-    if not file_bytes:
-        return PDFExtractionResult(
-            document_name=file_name,
-            total_pages=0,
-            extraction_status="failed",
-            error_message="Empty file bytes provided for extraction.",
-        )
-
-    doc = None
-    try:
-        import pymupdf
-        doc = pymupdf.open(stream=file_bytes, filetype="pdf")
-    except Exception as exc:
-        logger.warning(f"PyMuPDF open failed for '{file_name}' ({exc}), trying pypdf fallback...")
-        return _extract_text_with_pypdf(file_name, file_bytes, max_pages)
-
-    try:
-        # Check for password encryption
-        if doc.is_encrypted:
-            logger.warning(f"PDF '{file_name}' is password-protected.")
-            return PDFExtractionResult(
-                document_name=file_name,
-                total_pages=0,
-                extraction_status="failed",
-                error_message="Document is password-protected. Unencrypted PDFs are required.",
-            )
-
-        total_pages = doc.page_count
-        if total_pages == 0:
-            logger.warning(f"PDF '{file_name}' contains 0 pages.")
-            return PDFExtractionResult(
-                document_name=file_name,
-                total_pages=0,
-                extraction_status="failed",
-                error_message="Document contains 0 pages.",
-            )
-
-        # Apply max_pages boundary if specified
-        pages_to_process = total_pages
-        if max_pages and max_pages > 0:
-            pages_to_process = min(total_pages, max_pages)
-
-        extracted_pages: List[PageExtraction] = []
-        total_characters = 0
-        has_embedded_images = False
-
-        for page_idx in range(pages_to_process):
-            page_number = page_idx + 1  # 1-indexed
-            page = doc[page_idx]
-
-            # Check if page has images (useful for detecting scanned documents)
-            if not has_embedded_images and len(page.get_images()) > 0:
-                has_embedded_images = True
-
-            raw_text = page.get_text("text") or ""
-            cleaned_text = clean_page_text(raw_text)
-            char_count = len(cleaned_text)
-
             is_empty = (char_count == 0)
             if not is_empty:
                 total_characters += char_count
@@ -235,27 +138,7 @@ def extract_text_from_pdf(
                     error_message="Document contains no extractable text.",
                 )
 
-        # Scanned heuristic: multi-page PDF with very low text density (< 50 chars total) and images
-        if total_characters < 50 and has_embedded_images:
-            logger.info(f"PDF '{file_name}' has low text density ({total_characters} chars) and images: flagged as scanned.")
-            return PDFExtractionResult(
-                document_name=file_name,
-                total_pages=total_pages,
-                extraction_status="scanned",
-                pages=extracted_pages,
-                total_characters=total_characters,
-                is_scanned_document=True,
-                error_message=(
-                    "Document appears to be predominantly scanned or image-based with insufficient extractable text. "
-                    "OCR is not yet supported in this version."
-                ),
-            )
-
-        logger.info(
-            f"Successfully extracted text from '{file_name}': {len(extracted_pages)} pages, "
-            f"{total_characters} characters."
-        )
-
+        logger.info(f"Successfully extracted text via pypdf: {len(extracted_pages)} pages, {total_characters} characters.")
         return PDFExtractionResult(
             document_name=file_name,
             total_pages=total_pages,
@@ -265,14 +148,40 @@ def extract_text_from_pdf(
             is_scanned_document=False,
             error_message=None,
         )
-
     except Exception as exc:
-        logger.warning(f"PyMuPDF page extraction error for '{file_name}' ({exc}), trying pypdf fallback...")
-        return _extract_text_with_pypdf(file_name, file_bytes, max_pages)
+        logger.error(f"pypdf fallback extraction failed for '{file_name}': {exc}")
+        return PDFExtractionResult(
+            document_name=file_name,
+            total_pages=0,
+            extraction_status="failed",
+            error_message=f"Corrupted or invalid PDF structure: {str(exc)}",
+        )
 
-    finally:
-        if doc is not None:
-            try:
-                doc.close()
-            except Exception:
-                pass
+
+def extract_text_from_pdf(
+    file_name: str,
+    file_bytes: bytes,
+    max_pages: Optional[int] = None,
+) -> PDFExtractionResult:
+    """Extract text from uploaded PDF bytes page-by-page while preserving page numbers.
+
+    Uses pure-Python pypdf as the primary serverless extractor with zero C-library dependencies.
+
+    Args:
+        file_name: Name of the uploaded PDF file.
+        file_bytes: Binary content of the PDF.
+        max_pages: Optional maximum number of pages to process.
+
+    Returns:
+        Structured PDFExtractionResult containing per-page extractions, totals, and status.
+    """
+    if not file_bytes:
+        return PDFExtractionResult(
+            document_name=file_name,
+            total_pages=0,
+            extraction_status="failed",
+            error_message="Empty file bytes provided for extraction.",
+        )
+
+    # Use pure-Python pypdf as primary, 100% reliable serverless extractor
+    return _extract_text_with_pypdf(file_name, file_bytes, max_pages)

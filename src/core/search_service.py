@@ -276,7 +276,7 @@ def search_evidence_for_document(
             total_sources_retrieved=0,
             error_message=(
                 "Tavily Search API key missing: Please configure TAVILY_API_KEY in your .env file "
-                "or Streamlit secrets to retrieve live web evidence."
+                "or environment variables to retrieve live web evidence."
             ),
         )
 

@@ -96,13 +96,12 @@ def validate_uploaded_pdf(
             formatted_size=formatted_size,
         )
 
-    # 5. Check structural validity via PyMuPDF or pypdf fallback
+    # 5. Check structural validity via pure-Python pypdf (100% serverless safe)
     try:
-        import pymupdf
-        doc = pymupdf.open(stream=file_bytes, filetype="pdf")
-        
-        if doc.is_encrypted:
-            doc.close()
+        import io
+        import pypdf
+        reader = pypdf.PdfReader(io.BytesIO(file_bytes))
+        if reader.is_encrypted:
             return FileValidationResult(
                 is_valid=False,
                 error_message="Password protected: The uploaded PDF is encrypted. Please provide an unencrypted PDF.",
@@ -110,10 +109,7 @@ def validate_uploaded_pdf(
                 file_size_bytes=total_bytes,
                 formatted_size=formatted_size,
             )
-
-        page_count = doc.page_count
-        doc.close()
-
+        page_count = len(reader.pages)
         if page_count == 0:
             return FileValidationResult(
                 is_valid=False,
@@ -122,7 +118,6 @@ def validate_uploaded_pdf(
                 file_size_bytes=total_bytes,
                 formatted_size=formatted_size,
             )
-
         return FileValidationResult(
             is_valid=True,
             error_message=None,
@@ -131,43 +126,11 @@ def validate_uploaded_pdf(
             formatted_size=formatted_size,
             page_count=page_count,
         )
-
-    except Exception:
-        # Fallback to pure-Python pypdf (zero C dependencies, 100% serverless safe)
-        try:
-            import io
-            import pypdf
-            reader = pypdf.PdfReader(io.BytesIO(file_bytes))
-            if reader.is_encrypted:
-                return FileValidationResult(
-                    is_valid=False,
-                    error_message="Password protected: The uploaded PDF is encrypted. Please provide an unencrypted PDF.",
-                    file_name=file_name,
-                    file_size_bytes=total_bytes,
-                    formatted_size=formatted_size,
-                )
-            page_count = len(reader.pages)
-            if page_count == 0:
-                return FileValidationResult(
-                    is_valid=False,
-                    error_message="Corrupted PDF: Document contains 0 pages.",
-                    file_name=file_name,
-                    file_size_bytes=total_bytes,
-                    formatted_size=formatted_size,
-                )
-            return FileValidationResult(
-                is_valid=True,
-                error_message=None,
-                file_name=file_name,
-                file_size_bytes=total_bytes,
-                formatted_size=formatted_size,
-                page_count=page_count,
-            )
-        except Exception as exc:
-            return FileValidationResult(
-                is_valid=False,
-                error_message=f"Corrupted PDF file: Unable to parse document structure ({str(exc)}).",
-                file_name=file_name,
-                file_size_bytes=total_bytes,
-                formatted_size=formatted_size,
-            )
+    except Exception as exc:
+        return FileValidationResult(
+            is_valid=False,
+            error_message=f"Corrupted PDF file: Unable to parse document structure ({str(exc)}).",
+            file_name=file_name,
+            file_size_bytes=total_bytes,
+            formatted_size=formatted_size,
+        )

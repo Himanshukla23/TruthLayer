@@ -1,1 +1,1 @@
-"""UI components and views for Streamlit."""
+"""TruthLayer UI module."""
