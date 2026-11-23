@@ -8,10 +8,22 @@ import os
 import sys
 import traceback
 
-# Ensure project root is in sys.path so 'src' package can be imported on Vercel serverless
-_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if _PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, _PROJECT_ROOT)
+# Ensure both project root and api directory are in sys.path
+_CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+_PROJECT_ROOT = os.path.dirname(_CURRENT_DIR)
+
+for p in [
+    _CURRENT_DIR,
+    os.path.join(_CURRENT_DIR, "src"),
+    _PROJECT_ROOT,
+    os.path.join(_PROJECT_ROOT, "src"),
+    "/var/task",
+    "/var/task/api",
+    "/var/task/src",
+    "/var/task/api/src",
+]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
 
 import io
 from datetime import datetime, timezone
@@ -20,6 +32,15 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel
+
+# Safe schema placeholders to prevent module import NameError on serverless
+PDFExtractionResult: Any = Any
+ClaimEvidenceResult: Any = Any
+ClaimExtractionResponse: Any = Any
+ClaimVerificationResult: Any = Any
+ExtractedClaimItem: Any = Any
+VerificationReport: Any = Any
+VerificationStatus: Any = Any
 
 _BOOT_ERROR = None
 try:
