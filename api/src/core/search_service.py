@@ -3,7 +3,7 @@
 import re
 import urllib.parse
 from datetime import datetime, timezone
-from typing import Callable, Dict, List, Optional, Set
+from typing import Any, Callable, Dict, List, Optional, Set
 from tavily import TavilyClient
 
 from src.config import Settings, get_settings
