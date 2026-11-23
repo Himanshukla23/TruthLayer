@@ -4,6 +4,14 @@ Exposes RESTful endpoints under /api/py/* connecting to the preserved
 Python AI, extraction, search, verification, and report engines in src/.
 """
 
+import os
+import sys
+
+# Ensure project root is in sys.path so 'src' package can be imported on Vercel serverless
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
+
 import io
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
