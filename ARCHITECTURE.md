@@ -30,7 +30,7 @@ The architectural scope strictly reflects the requirements defined in [`PROBLEM_
 7. **Conservative Fallback:** Explicit assignment of `Unverified` whenever web evidence is contradictory, sparse, or inconclusive.
 8. **Audit Trail & Provenance:** Direct URL citation and extracted source publication dates for every evaluated claim.
 9. **Actionable Remediation:** Verified data corrections and explanatory notes for `Inaccurate` and `False` claims.
-10. **Interactive Report & Export:** Interactive Streamlit dashboard with summary scorecards, filterable claim ledgers, and downloadable JSON/Markdown verification summaries.
+10. **Interactive Report & Export:** Interactive Next.js 14 SaaS dashboard with summary scorecards, filterable claim ledgers, step-by-step audit viewer, and downloadable JSON/Markdown/PDF verification summaries.
 
 ### Out-of-Scope (Strict Non-Goals)
 * OCR processing of flat, scanned images or rasterized document snapshots.
@@ -46,31 +46,31 @@ The architectural scope strictly reflects the requirements defined in [`PROBLEM_
 
 | Layer | Technology | Version / Specification | Architectural Justification |
 | :--- | :--- | :--- | :--- |
-| **Frontend UI** | Streamlit | `>= 1.35.0` | Enables rapid development of reactive, Python-native SaaS dashboards with built-in state management and file upload widgets. |
-| **Backend Runtime** | Python | `3.10+` | Industry standard for AI orchestration, NLP pipelines, and data validation. |
-| **PDF Processing** | PyMuPDF (`fitz`) | `>= 1.24.0` | High-performance C-backed PDF parsing engine with precise page-level text extraction and boundary tracking. |
-| **AI Orchestration** | Google Gemini API | `gemini-2.5-flash` via `google-genai` SDK | High-speed, structured JSON schema enforcement, large context window, and robust reasoning capability for extraction and verification. |
+| **Frontend UI** | Next.js 14 / React 18 / Tailwind CSS | `14.2.35` | Ultra-fast responsive SaaS dashboard with drag-and-drop PDF upload, progress tracking, and interactive claims viewer. |
+| **Backend Runtime** | Python (FastAPI ASGI Serverless) | `3.12` | High-performance asynchronous REST API connecting frontend to AI verification pipelines on Vercel. |
+| **PDF Processing** | pypdf & PyMuPDF | `>= 4.0.0` | In-memory stream parsing engine with page-level text extraction and boundary tracking. |
+| **AI Orchestration** | Google Gemini API & Groq | `gemini-3.5-flash-lite` / `qwen/qwen3.8-27b` | High-speed, structured JSON schema enforcement, large context window, and robust reasoning capability. |
 | **Web Search** | Tavily Search API | `tavily-python >= 0.3.0` | Search API optimized for LLM agents, delivering clean markdown snippets, source domains, publication dates, and deduplicated results. |
 | **Data Validation** | Pydantic | `v2.x` (`pydantic >= 2.7.0`) | Strict runtime type enforcement, model serialization, and structured schema binding for all API inputs/outputs. |
-| **Configuration** | Pydantic Settings / `python-dotenv` | `>= 2.0.0` | Secure environment variable handling with automatic `.env` and `st.secrets` fallback. |
-| **Deployment** | Streamlit Community Cloud | Native Cloud Container | Zero-infrastructure deployment with built-in secret management, GitHub continuous delivery, and public SSL hosting. |
+| **Configuration** | Pydantic Settings / `python-dotenv` | `>= 2.0.0` | Secure environment variable handling with automatic `.env` and Vercel environment variables. |
+| **Deployment** | Vercel Edge & Serverless Functions | Production Hybrid | Global edge CDN for Next.js frontend with isolated Python serverless microservices. |
 | **Version Control** | Git / GitHub | Git SCM | Source code versioning, pull-request verification, and automated cloud sync. |
 
 ---
 
 ## 4. System Architecture
 
-TruthLayer is structured as a decoupled, multi-tier pipeline following clean architecture principles. The presentation layer (Streamlit UI) interacts strictly with the application orchestration layer, which delegates to specialized single-responsibility service modules.
+TruthLayer is structured as a decoupled, multi-tier pipeline following clean architecture principles. The presentation layer (Next.js 14 React UI) interacts strictly with the application orchestration layer (FastAPI serverless backend), which delegates to specialized single-responsibility service modules.
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
 │                        PRESENTATION LAYER                              │
-│   Streamlit Web Interface (Upload, Dashboard, Claim Cards, Export)    │
+│    Next.js 14 React Web Interface (Upload, Dashboard, Claims, Audit)   │
 └───────────────────────────────────┬────────────────────────────────────┘
-                                    │ Invokes Pipeline
+                                    │ Invokes REST API (/api/py/*)
 ┌───────────────────────────────────▼────────────────────────────────────┐
 │                       ORCHESTRATION LAYER                              │
-│              Verification Pipeline Coordinator (core/pipeline.py)      │
+│        FastAPI Serverless Microservices Engine (api/index.py)          │
 └───────────────┬───────────────────┬───────────────────┬────────────────┘
                 │ 1. Extract Text   │ 2. Extract Claims │ 3. Retrieve
 ┌───────────────▼──────────┐ ┌──────▼─────────────┐ ┌───▼────────────────┐
@@ -99,7 +99,7 @@ TruthLayer is structured as a decoupled, multi-tier pipeline following clean arc
 ```mermaid
 flowchart TD
     subgraph Client["Client Browser"]
-        UI["Streamlit Web UI"]
+        UI["Next.js 14 Web UI"]
     end
 
     subgraph AppServer["TruthLayer Application Core"]
@@ -141,7 +141,7 @@ flowchart TD
 sequenceDiagram
     autonumber
     actor User as User / Reviewer
-    participant UI as Streamlit UI
+    participant UI as Next.js 14 UI
     participant Orchestrator as Pipeline Orchestrator
     participant PDF as PyMuPDF Extractor
     participant LLM as Gemini API
@@ -178,48 +178,29 @@ sequenceDiagram
 
 ```
 TruthLayer/
-├── .streamlit/
-│   ├── config.toml               # Streamlit UI theme, port, and server configuration
-│   └── secrets.toml.example      # Example secrets structure for local development
-├── src/
-│   ├── __init__.py               # Package marker
+├── app/                          # Next.js 14 App Router (React 18 frontend)
+│   ├── layout.tsx                # Global HTML shell & metadata
+│   ├── page.tsx                  # Main SaaS dashboard & verification orchestrator
+│   └── globals.css               # Tailwind CSS styling
+├── components/                   # Reusable React components
+│   ├── Dropzone.tsx              # Drag-and-drop PDF uploader
+│   ├── ClaimsViewer.tsx          # Interactive claim ledger with search & filters
+│   ├── Scorecard.tsx             # Executive summary veracity metrics
+│   ├── StepByStepAnalysis.tsx    # Granular step-by-step pipeline inspector
+│   └── Navbar.tsx                # Header navigation bar
+├── api/                          # Vercel Serverless Function entry point
+│   ├── index.py                  # FastAPI ASGI application & routes
+│   └── requirements.txt          # Serverless microservice dependencies
+├── src/                          # Preserved Python backend verification engines
 │   ├── config.py                 # Pydantic Settings & environment variable configuration
-│   ├── models/
-│   │   ├── __init__.py           # Model exports
-│   │   └── schemas.py            # Pydantic data schemas & enum definitions
-│   ├── utils/
-│   │   ├── __init__.py
-│   │   ├── logger.py             # Standardized structured logging configuration
-│   │   └── exceptions.py         # Custom application exception taxonomy
-│   ├── core/
-│   │   ├── __init__.py
-│   │   ├── pdf_processor.py      # PyMuPDF extraction, validation, and page tracking
-│   │   ├── claim_extractor.py    # Gemini API prompt client for empirical claim extraction
-│   │   ├── search_service.py     # Tavily Search API client, query generator, result ranking
-│   │   ├── verifier.py           # Verification engine comparing claims with evidence
-│   │   └── pipeline.py           # End-to-end pipeline coordinator
-│   └── ui/
-│       ├── __init__.py
-│       ├── components.py         # Reusable UI widgets (cards, badges, metric cards)
-│       └── views.py              # Main dashboard view, claim ledger, report export views
-├── tests/
-│   ├── __init__.py
-│   ├── conftest.py               # Pytest fixtures and mock objects
-│   ├── test_config.py            # Configuration validation tests
-│   ├── test_pdf_processor.py     # PDF extraction and edge-case unit tests
-│   ├── test_claim_extractor.py   # Claim extraction schema & prompt unit tests
-│   ├── test_search_service.py    # Search query & retrieval mocking unit tests
-│   ├── test_verifier.py          # Fact-checking reasoning & classification tests
-│   └── test_schemas.py           # Pydantic serialization/deserialization tests
-├── data/
-│   └── sample_pdfs/              # Test PDFs for validation (empty, valid, multi-page)
-├── app.py                        # Streamlit application entry point
-├── requirements.txt              # Production Python package dependencies
+│   ├── models/schemas.py         # Pydantic data schemas & contracts
+│   ├── utils/                    # Logger, file validator, exception taxonomy
+│   └── core/                     # Extraction, search, verification & report engines
+├── tests/                        # Pytest unit & integration test suite (96 tests)
+├── vercel.json                   # Vercel deployment routing & runtime specification
+├── requirements.txt              # Project Python dependencies
 ├── .env.example                  # Environment variables template
-├── .gitignore                    # Git ignore file (excluding secrets, venv, caches)
-├── README.md                     # Project documentation & deployment instructions
-├── PROBLEM_STATEMENT.md          # Approved Business Problem Statement
-└── ARCHITECTURE.md               # Approved Technical Architecture & Roadmap
+└── README.md                     # Project documentation & deployment guide
 ```
 
 ---
@@ -237,8 +218,8 @@ TruthLayer/
 | `src/core/search_service.py` | Formulates targeted search queries from claims, queries Tavily Search API, cleans snippets, extracts publication dates, and removes duplicates. | Claim text and claim metadata | `SearchEvidence` containing `List[EvidenceSource]`. |
 | `src/core/verifier.py` | Orchestrates LLM-based fact verification. Compares claims against evidence snippets, determines status (`Verified`, `Inaccurate`, `False`, `Unverified`), generates corrections, and records citations. | `ExtractedClaim`, `SearchEvidence` | `ClaimVerificationResult`. |
 | `src/core/pipeline.py` | Coordinates the sequential execution of text extraction, claim extraction, search retrieval, and verification with progress callbacks. | Uploaded file stream, UI callbacks | `VerificationReport`. |
-| `src/ui/components.py` | Reusable Streamlit UI widgets: status badges, metrics displays, expander cards, and source citation links. | Data models | Streamlit HTML/rendered UI components. |
-| `src/ui/views.py` | Main page views: upload screen, processing progress display, interactive claim ledger, and report download buttons. | Pipeline state, `VerificationReport` | Interactive Streamlit dashboard. |
+| `src/ui/components.py` | UI component schema definitions. | Data models | Standardized UI component data. |
+| `src/ui/views.py` | Dashboard and report views definitions. | Pipeline state, `VerificationReport` | Formatted view models. |
 | `app.py` | Application entry point: initializes session state, loads configuration, manages view routing, and renders UI layout. | User interactions | Rendered web application. |
 
 ---
@@ -288,7 +269,7 @@ TruthLayer/
 [ Pipeline Aggregates Results into VerificationReport ]
         │
         ▼
-[ Streamlit UI Renders Scorecards, Claims Ledger, and Export Options ]
+[ Next.js 14 UI Renders Scorecards, Claims Ledger, and Export Options ]
 ```
 
 ---
@@ -299,12 +280,12 @@ TruthLayer/
 
 | API Provider | Purpose | Environment Variable | Secret Configuration | Fallback Behavior |
 | :--- | :--- | :--- | :--- | :--- |
-| **Google Gemini API** | Claim extraction, empirical filtering, and evidence-grounded verification reasoning. | `GEMINI_API_KEY` | `.env` locally;<br>`st.secrets["GEMINI_API_KEY"]` on Cloud. | Pipeline halts with clear diagnostic error prompt if key is missing or invalid. |
-| **Tavily Search API** | Real-time live web evidence retrieval, source snippet extraction, and publication date resolution. | `TAVILY_API_KEY` | `.env` locally;<br>`st.secrets["TAVILY_API_KEY"]` on Cloud. | Fallback: Claims categorized as `Unverified` with note: *"Live search unavailable"*; pipeline does not crash. |
+| **Google Gemini API** | Claim extraction, empirical filtering, and evidence-grounded verification reasoning. | `GEMINI_API_KEY` | `.env` locally;<br>Vercel Environment Variables in production. | Pipeline halts with clear diagnostic error prompt if key is missing or invalid. |
+| **Tavily Search API** | Real-time live web evidence retrieval, source snippet extraction, and publication date resolution. | `TAVILY_API_KEY` | `.env` locally;<br>Vercel Environment Variables in production. | Fallback: Claims categorized as `Unverified` with note: *"Live search unavailable"*; pipeline does not crash. |
 
 ### 9.2 API Security and Key Management
 * **Zero Hardcoded Secrets:** No secrets, tokens, or private keys may ever be committed to git.
-* **Unified Loader:** `src/config.py` provides a unified resolver that checks `os.environ` first, falls back to `streamlit.secrets` if running in Streamlit runtime, and verifies key presence on application startup.
+* **Unified Loader:** `src/config.py` provides a unified resolver that checks `os.environ` and `.env`, and verifies key presence on application startup.
 * **Redaction in Logs:** All logging utilities explicitly redact string values matching known API key patterns (`AIza...`, `tvly-...`).
 
 ---
@@ -433,28 +414,28 @@ The engineering implementation is structured across 9 sequential phases. Each ph
 
 | Phase | Phase Name | Primary Deliverable | Target Files Created / Modified | External APIs Required | Status |
 | :---: | :--- | :--- | :--- | :--- | :---: |
-| **1** | **Project Foundation & Environment** | Scaffolded codebase, configuration, dependency management, logger. | `src/config.py`, `src/utils/logger.py`, `src/utils/exceptions.py`, `requirements.txt`, `.env.example`, `.streamlit/config.toml` | None | **Completed** |
-| **2** | **Frontend & PDF Upload** | Streamlit UI shell, upload drag-and-drop, validation, SaaS styling. | `app.py`, `src/ui/components.py`, `src/ui/views.py`, `src/utils/file_validator.py` | None | **Completed** |
+| **1** | **Project Foundation & Environment** | Scaffolded codebase, configuration, dependency management, logger. | `src/config.py`, `src/utils/logger.py`, `src/utils/exceptions.py`, `requirements.txt`, `.env.example` | None | **Completed** |
+| **2** | **Frontend & PDF Upload** | Next.js 14 UI shell, upload drag-and-drop, validation, SaaS styling. | `app/page.tsx`, `components/Dropzone.tsx`, `src/utils/file_validator.py` | None | **Completed** |
 | **3** | **PDF Text Extraction** | PyMuPDF parsing engine with page-tracking & edge-case guards. | `src/core/pdf_processor.py`, `src/models/schemas.py`, `tests/test_pdf_processor.py` | None | **Completed** |
 | **4** | **AI-Based Claim Extraction** | Gemini structured claim extraction prompt & Pydantic validation (with Groq fallback). | `src/core/claim_extractor.py`, `tests/test_claim_extractor.py` | Google Gemini API (Primary) / Groq API (Fallback) | **Completed** |
 | **5** | **Live Web Search & Evidence Retrieval** | Tavily search integration, query generation, snippet/date extraction. | `src/core/search_service.py`, `tests/test_search_service.py` | Tavily Search API | **Completed** |
 | **6** | **Fact Verification Engine** | Gemini/Groq evidence reasoning, 4-status classification, corrections, citations, pipeline. | `src/core/verifier.py`, `src/core/pipeline.py`, `tests/test_verifier.py` | Gemini API & Groq API & Tavily API | **Completed** |
 | **7** | **Results Dashboard & Report Generation** | Interactive claim ledger, scorecard, visual breakdown, filters, and PDF/JSON/MD export. | `src/core/report_generator.py`, `src/ui/views.py`, `src/ui/components.py`, `tests/test_report_generator.py`, `tests/test_dashboard.py` | None (uses pipeline results) | **Completed** |
 | **8** | **Testing, Security & Optimization** | Full test suite, prompt injection defenses, secret auditing, latency benchmarks, TEST_REPORT.md. | `tests/`, `src/utils/security.py`, `TEST_REPORT.md` | Gemini API & Tavily API | **Completed** |
-| **9** | **Deployment & Final Submission** | Streamlit Cloud deployment, GitHub repo preparation, README, demo walkthrough. | `README.md`, `.streamlit/secrets.toml.example`, `.streamlit/config.toml` | All APIs (Cloud configured) | **Completed** |
+| **9** | **Deployment & Final Submission** | Vercel deployment, GitHub repo preparation, README, demo walkthrough. | `README.md`, `vercel.json`, `api/index.py` | All APIs (Vercel configured) | **Completed** |
 
 ---
 
 ## 12. Phase Acceptance Criteria
 
 ### Phase 1: Project Foundation and Environment Setup
-* `requirements.txt` contains pinned versions for Streamlit, PyMuPDF, Pydantic, Tavily, and Google GenAI SDK.
+* `requirements.txt` contains pinned versions for FastAPI, pypdf, Pydantic, Tavily, and Google GenAI SDK.
 * `src/config.py` successfully loads configuration without raising errors when API keys are empty strings in Phase 1.
 * Logging system outputs structured, formatted messages to standard output with timestamps and log levels.
 * Running `python -m pytest tests/` or importing `src.config` succeeds cleanly.
 
 ### Phase 2: Frontend and PDF Upload
-* Streamlit web interface starts cleanly via `streamlit run app.py`.
+* Next.js 14 web interface renders cleanly with responsive UI and real-time status.
 * File uploader restricts inputs strictly to `.pdf` MIME type with an enforced size limit (e.g., 10 MB).
 * Uploading an invalid file (e.g., `.txt`, `.docx`, or oversized file) displays an intuitive, non-crashing warning alert.
 * Valid PDF uploads display the file name, file size in KB/MB, and render a "Ready to Verify" status state.
@@ -486,7 +467,7 @@ The engineering implementation is structured across 9 sequential phases. Each ph
 * Every verdict carries direct URL source citations with publication dates.
 
 ### Phase 7: Results Dashboard and Report Generation
-* Streamlit UI renders an executive summary scorecard displaying total claims, verified count, inaccurate count, false count, and unverified count.
+* Next.js 14 UI renders an executive summary scorecard displaying total claims, verified count, inaccurate count, false count, and unverified count.
 * Filter bar allows users to filter claims by status (`All`, `Verified`, `Inaccurate`, `False`, `Unverified`).
 * Expandable claim cards show the original claim, source page number, status badge, reasoning, correction, and clickable evidence links.
 * Users can download a clean, structured JSON and Markdown verification report with a single click.
@@ -499,7 +480,7 @@ The engineering implementation is structured across 9 sequential phases. Each ph
 
 ### Phase 9: Deployment and Final Submission
 * GitHub repository contains clean code, clear commit history, and comprehensive `README.md`.
-* Application deploys successfully on Streamlit Community Cloud with secure secrets configured.
+* Application deploys successfully on Vercel with secure secrets configured.
 * Publicly accessible web URL is verified and responsive.
 * 30-second walkthrough demo video recorded and linked.
 
@@ -513,7 +494,7 @@ The testing matrix ensures rigorous validation across unit, integration, and sec
 ┌────────────────────────────────────────────────────────┐
 │                   TESTING PYRAMID                      │
 ├───────────────────────────────────┬────────────────────┤
-│ 1. End-to-End User Journey Tests  │ Streamlit pipeline │
+│ 1. End-to-End User Journey Tests  │ Next.js + FastAPI  │
 ├───────────────────────────────────┼────────────────────┤
 │ 2. Integration & Service Tests    │ Mocked APIs / Live │
 ├───────────────────────────────────┼────────────────────┤
@@ -541,7 +522,7 @@ The testing matrix ensures rigorous validation across unit, integration, and sec
 * **Prompt Injection Hardening:** Document text is treated as untrusted user input. All LLM prompts enclose document excerpts within explicit XML-style containment tags (`<document_content>...</document_content>`) accompanied by strict meta-instructions forbidding the model from executing text instructions found inside the document.
 * **Credential Hygiene:**
   * No API keys or tokens are stored in source code.
-  * `.gitignore` explicitly blocks `.env`, `.streamlit/secrets.toml`, `.pytest_cache`, and virtual environments.
+  * `.gitignore` explicitly blocks `.env`, `.pytest_cache`, and virtual environments.
   * `src/utils/logger.py` enforces regex sanitization to mask authorization keys in log traces.
 * **Ephemeral Document Handling:**
   * Uploaded PDF byte streams are processed purely in-memory; no uploaded documents are permanently written to server disk or external storage.
@@ -595,20 +576,20 @@ flowchart TD
 
 ## 17. Deployment Strategy
 
-The application is deployed using **Streamlit Community Cloud** connected directly to the project's GitHub repository.
+The application is deployed on **Vercel** connected directly to the project's GitHub repository.
 
 ```
 ┌─────────────────┐       ┌─────────────────┐       ┌────────────────────────┐
-│  Local Working   │ ───> │  GitHub Main    │ ───> │  Streamlit Community   │
-│  Directory      │  git  │  Repository     │ Auto │  Cloud Container       │
-│  (Verified)     │ push  │                 │ Sync │  (Secure Secrets Config)│
+│  Local Working   │ ───> │  GitHub Main    │ ───> │  Vercel Edge &         │
+│  Directory      │  git  │  Repository     │ Auto │  Serverless Platform   │
+│  (Verified)     │ push  │                 │ Deploy│ (Global CDN + Lambda)  │
 └─────────────────┘       └─────────────────┘       └────────────────────────┘
 ```
 
-1. **Repository Setup:** A clean GitHub repository containing application code, test suite, and configuration templates.
-2. **Secrets Configuration:** `GEMINI_API_KEY` and `TAVILY_API_KEY` configured in Streamlit Cloud Dashboard via native Secrets Management (`[secrets]`).
-3. **Continuous Deployment:** Pushes to the `main` branch trigger automated redeployment on Streamlit Cloud.
-4. **Health Check:** Automated smoke test verifying that the deployed endpoint loads, displays the file upload interface, and accepts valid test files.
+1. **Repository Setup:** A clean GitHub repository containing Next.js 14 frontend, FastAPI backend, and test suite.
+2. **Secrets Configuration:** `GEMINI_API_KEY` and `TAVILY_API_KEY` configured in Vercel Project Settings > Environment Variables.
+3. **Continuous Deployment:** Pushes to the `main` or `master` branch trigger automated redeployment on Vercel.
+4. **Health Check:** Live production health probe at `/api/py/health` verifying API availability and active integrations.
 
 ---
 

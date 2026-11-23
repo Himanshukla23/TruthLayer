@@ -6,10 +6,9 @@ TEST_REPORT.md
 PROGRESS.md
 PROBLEM_STATEMENT.md
 
-# Legacy Streamlit files
+# Unused stubs and files
 app.py
 src/ui/
-.streamlit/
 
 # Documentation and Git
 .git/

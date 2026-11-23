@@ -123,7 +123,7 @@ TruthLayer/
 │   │   └── pipeline.py           # Synchronous pipeline coordinator
 │   ├── models/
 │   │   └── schemas.py            # Pydantic data schemas and validation models
-│   ├── ui/                       # Optional Streamlit legacy UI components
+│   ├── ui/                       # UI interface definitions
 │   └── utils/
 │       ├── file_validator.py     # PDF validation, magic bytes (%PDF-), and size limits
 │       ├── logger.py             # Structured telemetry and formatted console logger
