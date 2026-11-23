@@ -83,6 +83,9 @@ def get_cached_tavily_client(api_key: str):
 @app.get("/api/py/health")
 @app.get("/api/health")
 @app.get("/health")
+@app.get("/api/index/health")
+@app.get("/api/index")
+@app.get("/api/")
 @app.get("/api")
 @app.get("/")
 async def health_check() -> Any:
@@ -131,6 +134,7 @@ async def health_check() -> Any:
 
 @app.post("/api/py/extract-text", response_model=PDFExtractionResult)
 @app.post("/api/extract-text", response_model=PDFExtractionResult)
+@app.post("/api/index/extract-text", response_model=PDFExtractionResult)
 @app.post("/extract-text", response_model=PDFExtractionResult)
 async def extract_text_endpoint(
     file: UploadFile = File(...),
@@ -174,6 +178,7 @@ async def extract_text_endpoint(
 
 @app.post("/api/py/search-claim-evidence", response_model=ClaimEvidenceResult)
 @app.post("/api/search-claim-evidence", response_model=ClaimEvidenceResult)
+@app.post("/api/index/search-claim-evidence", response_model=ClaimEvidenceResult)
 @app.post("/search-claim-evidence", response_model=ClaimEvidenceResult)
 async def search_claim_evidence_endpoint(
     claim: ExtractedClaimItem,
@@ -209,6 +214,7 @@ async def search_claim_evidence_endpoint(
 
 @app.post("/api/py/extract-claims", response_model=ClaimExtractionResponse)
 @app.post("/api/extract-claims", response_model=ClaimExtractionResponse)
+@app.post("/api/index/extract-claims", response_model=ClaimExtractionResponse)
 @app.post("/extract-claims", response_model=ClaimExtractionResponse)
 async def extract_claims_endpoint(
     file: UploadFile = File(...),
@@ -311,6 +317,7 @@ class VerifySingleClaimRequest(BaseModel):
 
 @app.post("/api/py/verify-single-claim", response_model=ClaimVerificationResult)
 @app.post("/api/verify-single-claim", response_model=ClaimVerificationResult)
+@app.post("/api/index/verify-single-claim", response_model=ClaimVerificationResult)
 @app.post("/verify-single-claim", response_model=ClaimVerificationResult)
 async def verify_single_claim_endpoint(
     request: VerifySingleClaimRequest,
@@ -364,6 +371,7 @@ async def verify_single_claim_endpoint(
 
 @app.post("/api/py/verify-full-document", response_model=VerificationReport)
 @app.post("/api/verify-full-document", response_model=VerificationReport)
+@app.post("/api/index/verify-full-document", response_model=VerificationReport)
 @app.post("/verify-full-document", response_model=VerificationReport)
 async def verify_full_document_endpoint(
     file: UploadFile = File(...),
@@ -412,6 +420,7 @@ class GenerateReportRequest(BaseModel):
 
 @app.post("/api/py/generate-report")
 @app.post("/api/generate-report")
+@app.post("/api/index/generate-report")
 @app.post("/generate-report")
 async def generate_report_endpoint(request: GenerateReportRequest) -> Response:
     """Generate in-memory downloadable verification audit report in PDF, Markdown, or JSON."""
