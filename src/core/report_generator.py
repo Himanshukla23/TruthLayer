@@ -8,19 +8,26 @@ import io
 import json
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import (
-    SimpleDocTemplate,
-    Paragraph,
-    Spacer,
-    Table,
-    TableStyle,
-    KeepTogether,
-    HRFlowable,
-)
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib import colors
-from reportlab.pdfgen import canvas
+try:
+    from reportlab.lib.pagesizes import letter
+    from reportlab.platypus import (
+        SimpleDocTemplate,
+        Paragraph,
+        Spacer,
+        Table,
+        TableStyle,
+        KeepTogether,
+        HRFlowable,
+    )
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib import colors
+    from reportlab.pdfgen import canvas
+    _REPORTLAB_AVAILABLE = True
+except Exception as _rl_exc:
+    _REPORTLAB_AVAILABLE = False
+    canvas = None
+    letter = None
+    colors = None
 
 from src.models.schemas import (
     VerificationReport,
@@ -33,47 +40,52 @@ from src.utils.logger import get_logger
 logger = get_logger("truthlayer.core.report_generator")
 
 
-class NumberedCanvas(canvas.Canvas):
-    """Two-pass canvas to dynamically compute and draw total page counts and running headers."""
+if _REPORTLAB_AVAILABLE and canvas is not None:
+    class NumberedCanvas(canvas.Canvas):
+        """Two-pass canvas to dynamically compute and draw total page counts and running headers."""
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        self._saved_page_states: List[Dict[str, Any]] = []
-        self.doc_title: str = "TruthLayer Fact-Checking Audit Report"
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            super().__init__(*args, **kwargs)
+            self._saved_page_states: List[Dict[str, Any]] = []
+            self.doc_title: str = "TruthLayer Fact-Checking Audit Report"
 
-    def showPage(self) -> None:
-        self._saved_page_states.append(dict(self.__dict__))
-        self._startPage()
+        def showPage(self) -> None:
+            self._saved_page_states.append(dict(self.__dict__))
+            self._startPage()
 
-    def save(self) -> None:
-        num_pages = len(self._saved_page_states)
-        for state in self._saved_page_states:
-            self.__dict__.update(state)
-            self.draw_page_decorations(num_pages)
-            super().showPage()
-        super().save()
+        def save(self) -> None:
+            num_pages = len(self._saved_page_states)
+            for state in self._saved_page_states:
+                self.__dict__.update(state)
+                self.draw_page_decorations(num_pages)
+                super().showPage()
+            super().save()
 
-    def draw_page_decorations(self, page_count: int) -> None:
-        self.saveState()
-        self.setFont("Helvetica", 8)
-        self.setFillColor(colors.HexColor("#64748B"))
+        def draw_page_decorations(self, page_count: int) -> None:
+            self.saveState()
+            self.setFont("Helvetica", 8)
+            self.setFillColor(colors.HexColor("#64748B"))
 
-        # Running header on page 2 and onwards
-        if self._pageNumber > 1:
-            self.drawString(40, 755, f"TruthLayer Audit Report — {self.doc_title[:50]}")
+            # Running header on page 2 and onwards
+            if self._pageNumber > 1:
+                self.drawString(40, 755, f"TruthLayer Audit Report — {self.doc_title[:50]}")
+                self.setStrokeColor(colors.HexColor("#CBD5E1"))
+                self.setLineWidth(0.5)
+                self.line(40, 747, 572, 747)
+
+            # Running footer on every page
+            page_text = f"Page {self._pageNumber} of {page_count}"
+            self.drawRightString(572, 30, page_text)
+            self.drawString(40, 30, "TruthLayer AI Fact-Checking Engine • Confidential Audit Report")
             self.setStrokeColor(colors.HexColor("#CBD5E1"))
             self.setLineWidth(0.5)
-            self.line(40, 747, 572, 747)
+            self.line(40, 42, 572, 42)
 
-        # Running footer on every page
-        page_text = f"Page {self._pageNumber} of {page_count}"
-        self.drawRightString(572, 30, page_text)
-        self.drawString(40, 30, "TruthLayer AI Fact-Checking Engine • Confidential Audit Report")
-        self.setStrokeColor(colors.HexColor("#CBD5E1"))
-        self.setLineWidth(0.5)
-        self.line(40, 42, 572, 42)
-
-        self.restoreState()
+            self.restoreState()
+else:
+    class NumberedCanvas:  # type: ignore
+        """Fallback canvas when reportlab is not available."""
+        pass
 
 
 def _format_confidence_label(conf: float) -> str:
@@ -116,6 +128,8 @@ def generate_pdf_report(report: VerificationReport) -> bytes:
     Returns:
         bytes: Raw PDF document bytes.
     """
+    if not _REPORTLAB_AVAILABLE:
+        raise RuntimeError("ReportLab is not available in this environment for PDF export.")
     logger.info(f"Generating PDF audit report for '{report.document_name}'...")
     buffer = io.BytesIO()
 

@@ -75,29 +75,37 @@ def get_cached_tavily_client(api_key: str):
 @app.get("/")
 async def health_check() -> Dict[str, Any]:
     """Health status and API integration readiness check."""
-    settings = get_settings()
-    return {
-        "status": "healthy",
-        "service": "TruthLayer API",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "integrations": {
-            "gemini": {
-                "configured": settings.is_gemini_configured,
-                "model": settings.gemini_model,
+    try:
+        settings = get_settings()
+        return {
+            "status": "healthy",
+            "service": "TruthLayer API",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "integrations": {
+                "gemini": {
+                    "configured": settings.is_gemini_configured,
+                    "model": settings.gemini_model,
+                },
+                "tavily": {
+                    "configured": settings.is_tavily_configured,
+                },
+                "groq": {
+                    "configured": settings.is_groq_configured,
+                    "model": settings.groq_model,
+                },
             },
-            "tavily": {
-                "configured": settings.is_tavily_configured,
+            "limits": {
+                "max_upload_size_mb": 4.0,  # Vercel serverless request body ceiling
+                "max_pdf_pages": settings.max_pdf_pages,
             },
-            "groq": {
-                "configured": settings.is_groq_configured,
-                "model": settings.groq_model,
-            },
-        },
-        "limits": {
-            "max_upload_size_mb": 4.0,  # Vercel serverless request body ceiling
-            "max_pdf_pages": settings.max_pdf_pages,
-        },
-    }
+        }
+    except Exception as exc:
+        return {
+            "status": "error",
+            "service": "TruthLayer API",
+            "error": str(exc),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
 
 
 @app.post("/api/py/extract-text", response_model=PDFExtractionResult)
