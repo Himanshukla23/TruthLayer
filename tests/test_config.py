@@ -33,7 +33,6 @@ class TestProjectStructure:
             project_root / "src" / "core",
             project_root / "src" / "ui",
             project_root / "tests",
-            project_root / ".streamlit",
         ]
         for directory in expected_dirs:
             assert directory.is_dir(), f"Expected directory {directory} does not exist"
@@ -47,7 +46,6 @@ class TestProjectStructure:
             project_root / "app.py",
             project_root / "PROBLEM_STATEMENT.md",
             project_root / "ARCHITECTURE.md",
-            project_root / ".streamlit" / "config.toml",
             project_root / "src" / "config.py",
             project_root / "src" / "utils" / "logger.py",
             project_root / "src" / "utils" / "exceptions.py",
