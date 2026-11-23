@@ -58,7 +58,7 @@ class TestProjectStructure:
         gitignore_path = project_root / ".gitignore"
         content = gitignore_path.read_text(encoding="utf-8")
         assert ".env" in content
-        assert ".streamlit/secrets.toml" in content
+        assert "secrets.toml" in content
         assert "__pycache__" in content
 
 

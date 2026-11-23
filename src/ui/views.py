@@ -1,1 +1,1 @@
-"""Legacy Streamlit UI views (stubbed for Next.js 14 transition)."""
+"""TruthLayer UI views (backend stub for Next.js 14 frontend architecture)."""

@@ -363,6 +363,8 @@ async def verify_single_claim_endpoint(
 
 
 @app.post("/api/py/verify-full-document", response_model=VerificationReport)
+@app.post("/api/verify-full-document", response_model=VerificationReport)
+@app.post("/verify-full-document", response_model=VerificationReport)
 async def verify_full_document_endpoint(
     file: UploadFile = File(...),
 ) -> VerificationReport:
